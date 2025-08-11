@@ -1,4 +1,4 @@
-/* Base dark background and text */
+/* Base dark theme */
 body {
     background-color: #121212;
     color: #e0e0e0;
@@ -6,9 +6,9 @@ body {
     line-height: 1.5;
 }
 
-/* Hi-tech accent colors */
+/* Accent colors */
 :root {
-    --bs-primary: #00d4ff; /* neon cyan */
+    --bs-primary: #00d4ff; /* cyan */
     --bs-secondary: #1f1f1f;
     --bs-success: #00ffaa;
     --bs-info: #009dff;
@@ -16,25 +16,60 @@ body {
     --bs-danger: #ff4f4f;
 }
 
+/* Remove all rounding */
+* {
+    border-radius: 0 !important;
+}
+
 /* Buttons */
-.btn-primary {
+.btn {
     background-color: var(--bs-primary);
     border-color: var(--bs-primary);
     color: #000;
 }
-.btn-primary:hover {
+.btn:hover {
     background-color: #00b6d6;
     border-color: #00b6d6;
 }
 
-/* Cards / panels */
-.card {
-    background-color: #1c1c1c;
+/* Nav tabs */
+.nav-tabs {
+    border-bottom: 1px solid #2a2a2a;
+}
+.nav-tabs .nav-link {
+    background-color: #1f1f1f;
     border: 1px solid #2a2a2a;
-    border-radius: 8px;
+    color: #e0e0e0;
+}
+.nav-tabs .nav-link.active {
+    background-color: #2a2a2a;
+    border-color: #2a2a2a #2a2a2a #2a2a2a;
+    color: var(--bs-primary);
 }
 
-/* Form controls */
+/* Tab content */
+.tab-content {
+    background-color: #1c1c1c;
+    padding: 1rem;
+    border: 1px solid #2a2a2a;
+    border-top: none;
+}
+
+/* Tables */
+.table {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+.table thead th {
+    background-color: #2a2a2a;
+    color: var(--bs-primary);
+    border-bottom: 1px solid #333;
+}
+.table td, .table th {
+    border-color: #333;
+}
+
+/* Forms */
 .form-control {
     background-color: #1f1f1f;
     color: #e0e0e0;
@@ -44,22 +79,6 @@ body {
     border-color: var(--bs-primary);
     background-color: #252525;
     color: #fff;
-}
-
-/* Navbar / headers */
-.navbar {
-    background-color: #181818;
-    border-bottom: 1px solid #2a2a2a;
-}
-
-/* Table */
-.table {
-    background-color: #1e1e1e;
-    color: #e0e0e0;
-}
-.table thead th {
-    background-color: #2a2a2a;
-    color: var(--bs-primary);
 }
 
 /* Links */
