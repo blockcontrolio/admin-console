@@ -1,4 +1,4 @@
-const apiBaseUrl = import.meta.env.VITE_API_BASE || `${window.location.origin}/admin/counterparties`;
+const apiBaseUrl = import.meta.env.VITE_API_BASE + '/admin/counterparties' || `${window.location.origin}/admin/counterparties`;
 
 function loadAuthToken() {
     return localStorage.getItem('x-api-key') || '';

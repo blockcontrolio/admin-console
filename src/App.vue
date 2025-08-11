@@ -21,7 +21,7 @@ export default {
     save() {
       localStorage.setItem('x-api-key', this.apiKey);
       this.originalApiKey = this.apiKey; // reset on change detection
-      this.notification = 'Refresh page to get it working'
+      this.notification = 'Refresh data'
     }
   },
   mounted() {
@@ -32,8 +32,8 @@ export default {
 
 <template>
   <div class="container py-4">
-    <h3 class="mb-3">API Settings</h3>
-    <input v-model="apiKey" class="form-control text-white mb-2" placeholder="Enter x-api-key"/>
+    <h3 class="mb-4">Admin Console</h3>
+    <input v-model="apiKey" class="form-control mb-2" placeholder="Enter x-api-key"/>
     <span v-if="apiKey === ''" class="form-text text-warning">Provide valid api key</span>
     <span v-else-if="this.notification" class="form-text text-warning">{{ this.notification }}</span>
     <div class="d-flex justify-content-end mt-3">

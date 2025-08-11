@@ -14,6 +14,11 @@ body {
     --bs-info: #009dff;
     --bs-warning: #ffc107;
     --bs-danger: #ff4f4f;
+
+    --color-text-main: #ffffff;
+    --color-text-light: #555555;
+    --color-border: #dad8d2;
+    --shadow-light: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 /* Remove all rounding */
@@ -79,6 +84,20 @@ body {
     border-color: var(--bs-primary);
     background-color: #252525;
     color: #fff;
+}
+
+input::placeholder,
+select {
+    color: var(--color-text-light) !important;
+}
+
+input.form-control {
+    color: var(--color-text-main) !important;
+}
+
+input.form-control:focus {
+    border-color: var(--color-border);
+    box-shadow: 0 0 0 0.2rem var(--shadow-light);
 }
 
 /* Links */
