@@ -1,0 +1,71 @@
+/* Base dark background and text */
+body {
+    background-color: #121212;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.5;
+}
+
+/* Hi-tech accent colors */
+:root {
+    --bs-primary: #00d4ff; /* neon cyan */
+    --bs-secondary: #1f1f1f;
+    --bs-success: #00ffaa;
+    --bs-info: #009dff;
+    --bs-warning: #ffc107;
+    --bs-danger: #ff4f4f;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: #000;
+}
+.btn-primary:hover {
+    background-color: #00b6d6;
+    border-color: #00b6d6;
+}
+
+/* Cards / panels */
+.card {
+    background-color: #1c1c1c;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+}
+
+/* Form controls */
+.form-control {
+    background-color: #1f1f1f;
+    color: #e0e0e0;
+    border: 1px solid #333;
+}
+.form-control:focus {
+    border-color: var(--bs-primary);
+    background-color: #252525;
+    color: #fff;
+}
+
+/* Navbar / headers */
+.navbar {
+    background-color: #181818;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+/* Table */
+.table {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+.table thead th {
+    background-color: #2a2a2a;
+    color: var(--bs-primary);
+}
+
+/* Links */
+a {
+    color: var(--bs-primary);
+}
+a:hover {
+    color: #00b6d6;
+}
