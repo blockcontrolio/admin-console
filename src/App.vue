@@ -18,10 +18,16 @@ export default {
     }
   },
   methods: {
-    save() {
-      localStorage.setItem('x-api-key', this.apiKey);
-      this.originalApiKey = this.apiKey; // reset on change detection
-      this.notification = 'Refresh data'
+    saveKey() {
+      if (this.apiKey.trim()) {
+        localStorage.setItem('x-api-key', this.apiKey.trim())
+        this.originalApiKey = this.apiKey; // reset on change detection
+        this.notification = 'Refresh data'
+      }
+    },
+    clearKey() {
+      localStorage.removeItem('x-api-key')
+      this.apiKey = ''
     }
   },
   mounted() {
@@ -33,13 +39,24 @@ export default {
 <template>
   <div class="container py-4">
     <h3 class="mb-4">Admin Console</h3>
-    <input v-model="apiKey" class="form-control mb-2" placeholder="Enter x-api-key"/>
+    <input v-if="!apiKey" v-model="apiKey" class="form-control mb-2" placeholder="Enter x-api-key"/>
+    <!-- show masked key if saved -->
+    <div v-else class="form-control mb-2 text-muted">
+      {{ '•'.repeat(apiKey.length) }}
+      <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary ms-2"
+          @click="clearKey"
+      >
+        Clear
+      </button>
+    </div>
     <span v-if="apiKey === ''" class="form-text text-warning">Provide valid api key</span>
     <span v-else-if="this.notification" class="form-text text-warning">{{ this.notification }}</span>
     <div class="d-flex justify-content-end mt-3">
       <button
           class="btn btn-success"
-          @click="save"
+          @click="saveKey"
           :disabled="!hasChanged">
         Save
       </button>
@@ -84,7 +101,7 @@ export default {
           role="tabpanel"
           aria-labelledby="networks-tab"
       >
-        <Networks/>
+        <Networks @data-refreshed="this.notification = null" :notification="this.notification"/>
       </div>
       <div
           class="tab-pane fade"

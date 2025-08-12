@@ -8,6 +8,7 @@ import {
 
 export default {
   name: 'Networks',
+  props: ['notification'],
   data() {
     return {
       networks: [],
@@ -33,6 +34,7 @@ export default {
     async fetchNetworks() {
       try {
         this.networks = await getAllNetworks();
+        this.$emit('data-refreshed');
       } catch (err) {
         console.error('Error fetching networks', err);
       }
@@ -77,7 +79,8 @@ export default {
   },
   mounted() {
     this.fetchNetworks();
-  }
+  },
+  emits: ['data-refreshed'],
 };
 </script>
 
@@ -86,7 +89,11 @@ export default {
     <!-- Title & Refresh -->
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h4 class="m-0">Networks</h4>
-      <button class="btn btn-sm btn-primary" @click="fetchNetworks">
+      <button
+          class="btn btn-sm"
+          @click="fetchNetworks()"
+          :class="this.notification && this.notification.includes('Refresh') ? 'btn-warning' : 'btn-primary'"
+      >
         Refresh
       </button>
     </div>
@@ -107,8 +114,8 @@ export default {
           <td>{{ n.name }}</td>
           <td>{{ n.chainId }}</td>
           <td><a :href="n.explorerUrl" target="_blank">{{ n.explorerUrl }}</a></td>
-          <td>
-            <button class="btn btn-sm btn-info me-2" @click="editNetwork(n.id)">
+          <td class="text-center">
+            <button class="btn btn-sm btn-info" @click="editNetwork(n.id)">
               Edit
             </button>
           </td>
@@ -153,15 +160,11 @@ export default {
         <fieldset class="border p-3 mb-3">
           <legend class="text-light float-none w-auto mb-0 fs-6">Native Asset (optional)</legend>
           <div class="row g-2 mt-1">
-            <div class="col-md-4">
+            <div class="col-md-6">
               <input v-model="form.nativeAsset.symbol" placeholder="Symbol" type="text" class="form-control"/>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
               <input v-model="form.nativeAsset.name" placeholder="Name" type="text" class="form-control"/>
-            </div>
-            <div class="col-md-4">
-              <input v-model.number="form.nativeAsset.decimals" placeholder="Decimals" type="number" min="0"
-                     class="form-control"/>
             </div>
           </div>
         </fieldset>
