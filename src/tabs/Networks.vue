@@ -170,9 +170,10 @@ export default {
         </fieldset>
 
         <div class="d-flex justify-content-end">
-          <button type="submit" class="btn btn-success me-2">
+          <button type="submit" class="btn btn-success">
             {{ editingId ? 'Update' : 'Create' }}
           </button>
+          <span class="mx-2"></span>
           <button type="button" class="btn btn-secondary" @click="resetForm">
             Cancel
           </button>

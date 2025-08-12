@@ -18,12 +18,7 @@ async function request(url, options = {}) {
         throw new Error(`API request failed: ${response.status} ${errorBody}`);
     }
 
-    // try JSON, fallback to text
-    try {
-        return await response.json();
-    } catch {
-        return await response.text();
-    }
+    return await response.json();
 }
 
 // GET /admin/networks
