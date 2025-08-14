@@ -1,0 +1,53 @@
+const apiBaseUrl = import.meta.env.VITE_API_BASE + '/admin/networks' || `${window.location.origin}/admin/networks`;
+
+function loadAuthToken() {
+    return localStorage.getItem('x-api-key') || '';
+}
+
+async function request(url, options = {}) {
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-API-KEY': loadAuthToken(),
+        ...(options.headers || {})
+    };
+
+    const response = await fetch(url, {...options, headers});
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`API request failed: ${response.status} ${errorBody}`);
+    }
+
+    // try JSON, fallback to text
+    try {
+        return await response.json();
+    } catch {
+        return await response.text();
+    }
+}
+
+// GET /admin/networks
+export function getAllNetworks() {
+    return request(apiBaseUrl);
+}
+
+// GET /admin/networks/{id}
+export function getNetworkById(id) {
+    return request(`${apiBaseUrl}/${id}`);
+}
+
+// POST /admin/networks
+export function createNetwork(data) {
+    return request(apiBaseUrl, {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+}
+
+// PUT /admin/networks/{id}
+export function updateNetwork(id, data) {
+    return request(`${apiBaseUrl}/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+    });
+}

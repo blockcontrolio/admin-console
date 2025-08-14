@@ -1,0 +1,98 @@
+/* Base dark theme */
+body {
+    background-color: #121212;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.5;
+}
+
+/* Accent colors */
+:root {
+    --bs-primary: #00d4ff; /* cyan */
+    --bs-secondary: #1f1f1f;
+    --bs-success: #00ffaa;
+    --bs-info: #009dff;
+    --bs-warning: #ffc107;
+    --bs-danger: #ff4f4f;
+
+    --color-text-main: #ffffff;
+    --color-text-light: #555555;
+    --color-border: #dad8d2;
+    --shadow-light: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+/* Remove all rounding */
+* {
+    border-radius: 0 !important;
+}
+
+/* Nav tabs */
+.nav-tabs {
+    border-bottom: 1px solid #2a2a2a;
+}
+.nav-tabs .nav-link {
+    background-color: #1f1f1f;
+    border: 1px solid #2a2a2a;
+    color: #e0e0e0;
+}
+.nav-tabs .nav-link.active {
+    background-color: #2a2a2a;
+    border-color: #2a2a2a #2a2a2a #2a2a2a;
+    color: var(--bs-primary);
+}
+
+/* Tab content */
+.tab-content {
+    background-color: #1c1c1c;
+    padding: 1rem;
+    border: 1px solid #2a2a2a;
+    border-top: none;
+}
+
+/* Tables */
+.table {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+.table thead th {
+    background-color: #2a2a2a;
+    color: var(--bs-primary);
+    border-bottom: 1px solid #333;
+}
+.table td, .table th {
+    border-color: #333;
+}
+
+/* Forms */
+.form-control {
+    background-color: #1f1f1f;
+    color: #e0e0e0;
+    border: 1px solid #333;
+}
+.form-control:focus {
+    border-color: var(--bs-primary);
+    background-color: #252525;
+    color: #fff;
+}
+
+input::placeholder,
+select {
+    color: var(--color-text-light) !important;
+}
+
+input.form-control {
+    color: var(--color-text-main) !important;
+}
+
+input.form-control:focus {
+    border-color: var(--color-border);
+    box-shadow: 0 0 0 0.2rem var(--shadow-light);
+}
+
+/* Links */
+a {
+    color: var(--bs-primary);
+}
+a:hover {
+    color: #00b6d6;
+}
