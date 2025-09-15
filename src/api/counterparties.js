@@ -1,13 +1,17 @@
 const apiBaseUrl = import.meta.env.VITE_API_BASE + '/admin/counterparties' || `${window.location.origin}/admin/counterparties`;
 
 function loadAuthToken() {
-    return localStorage.getItem('x-api-key') || '';
+    return localStorage.getItem('x-api-key');
 }
 
 async function request(url, options = {}) {
+    let token = loadAuthToken();
+    if (!token) {
+        throw new Error('Token not set!')
+    }
     const headers = {
         'Content-Type': 'application/json',
-        'X-API-KEY': loadAuthToken(),
+        'X-API-KEY': token,
         ...(options.headers || {})
     };
 
@@ -41,7 +45,7 @@ export function createCounterparty(data) {
 
 // POST /admin/counterparties/register
 export function addUserToCounterparty(data) {
-    return request(`${apiBaseUrl}/register`, {
+    return request(`${apiBaseUrl}/users`, {
         method: 'POST',
         body: JSON.stringify(data)
     });

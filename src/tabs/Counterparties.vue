@@ -13,6 +13,13 @@ export default {
   name: 'Counterparties',
   data() {
     return {
+      types: [
+        {
+          code: 'EMI'
+        },
+        {
+          code: 'LSP'
+        }],
       counterparties: [],
       networks: [], // store networks here
       editingId: null,
@@ -24,18 +31,19 @@ export default {
   methods: {
     emptyForm() {
       return {
-        name: '',
-        vaultId: '',
-        apiCosignerPublicKey: '',
-        networkId: ''
+        name: "",
+        type: "",
+        vaultId: "",
+        apiCosignerPublicKey: "",
+        networkId: ""
       };
     },
     emptyRegistration() {
       return {
-        email: '',
-        password: '',
-        confirmPassword: '',
-        counterpartyId: ''
+        email: "",
+        password: "",
+        confirmPassword: "",
+        counterpartyId: ""
       };
     },
     async fetchCounterparties() {
@@ -59,9 +67,10 @@ export default {
         this.editingId = id;
         this.form = {
           name: c.name,
+          type: c.type,
           vaultId: c.vaultId,
-          apiCosignerPublicKey: '',
-          networkId: c.network?.id || ''
+          apiCosignerPublicKey: "",
+          networkId: c.network?.id || ""
         };
       } catch (err) {
         console.error('Error fetching counterparty', err);
@@ -124,6 +133,7 @@ export default {
         <thead>
         <tr>
           <th>Name</th>
+          <th>Type</th>
           <th style="width: 340px;">Vault ID</th>
           <th>Chain ID</th>
           <th style="width: 180px;">Actions</th>
@@ -132,6 +142,7 @@ export default {
         <tbody>
         <tr v-for="c in counterparties" :key="c.internalId">
           <td>{{ c.name }}</td>
+          <td>{{ c.type }}</td>
           <td>{{ c.vaultId }}</td>
           <td>{{ c.network?.chainId }}</td>
           <td class="text-center">
@@ -158,6 +169,16 @@ export default {
         <div class="mb-3">
           <label class="form-label text-light">Name</label>
           <input v-model="form.name" type="text" class="form-control" required/>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label text-light">Type</label>
+          <select v-model="form.type" class="form-select" required>
+            <option disabled value="">-- Counterparty Type --</option>
+            <option v-for="t in types" :key="t.code" :value="t.code">
+              {{ t.code }}
+            </option>
+          </select>
         </div>
 
         <div class="mb-3">
