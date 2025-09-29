@@ -3,7 +3,7 @@ import {
   getCounterparties,
   getCounterparty,
   createCounterparty,
-  addUserToCounterparty
+  addUserToCounterparty, updateCounterparty
 } from '../api/counterparties.js'
 import {
   getAllNetworks,
@@ -20,12 +20,14 @@ export default {
         {
           code: 'LSP'
         }],
+      providers: ['MOCK', 'UTILA', 'FIREBLOCKS', 'DFNS'],
       counterparties: [],
       networks: [], // store networks here
       editingId: null,
       registeringId: null,
       form: this.emptyForm(),
-      registration: this.emptyRegistration()
+      registration: this.emptyRegistration(),
+      originalData: {}
     };
   },
   methods: {
@@ -34,8 +36,9 @@ export default {
         name: "",
         type: "",
         vaultId: "",
-        apiCosignerPublicKey: "",
-        networkId: ""
+        apiCosignerPublicKey: null,
+        networkId: "",
+        provider: ""
       };
     },
     emptyRegistration() {
@@ -65,12 +68,18 @@ export default {
       try {
         const c = await getCounterparty(id);
         this.editingId = id;
+        this.originalData = {
+          name: c.name ?? null,
+          vaultId: c.vaultId ?? null,
+          provider: c.provider ?? null
+        };
         this.form = {
           name: c.name,
           type: c.type,
           vaultId: c.vaultId,
-          apiCosignerPublicKey: "",
-          networkId: c.network?.id || ""
+          apiCosignerPublicKey: null,
+          networkId: c.network?.id || "",
+          provider: c.provider
         };
       } catch (err) {
         console.error('Error fetching counterparty', err);
@@ -78,7 +87,16 @@ export default {
     },
     async submitForm() {
       try {
-        await createCounterparty(this.form);
+        if (!this.editingId) {
+          await createCounterparty(this.form);
+        } else {
+          const patch = this.buildPatch(this.form, this.originalData);
+          if (Object.keys(patch).length === 0) {
+            console.log("No changes to send.");
+            return;
+          }
+          await updateCounterparty(this.editingId, patch);
+        }
         await this.fetchCounterparties();
         this.resetForm();
       } catch (err) {
@@ -88,6 +106,7 @@ export default {
     resetForm() {
       this.editingId = null;
       this.form = this.emptyForm();
+      this.originalData = {};
     },
     openRegistration(counterpartyId) {
       this.editingId = null;
@@ -106,6 +125,23 @@ export default {
     cancelRegistration() {
       this.registeringId = null;
       this.registration = this.emptyRegistration();
+    },
+    buildPatch(newModel, originalModel) {
+      const patch = {};
+      if (newModel['name'] !== originalModel['name']) {
+        patch['name'] = newModel['name'];
+      }
+      if (newModel['vaultId'] !== originalModel['vaultId']) {
+        patch['vaultId'] = newModel['vaultId'];
+      }
+      if (newModel['provider'] !== originalModel['provider']) {
+        patch['provider'] = newModel['provider'];
+      }
+      // detect only real changes because this field not present in response
+      if (newModel['apiCosignerPublicKey']) {
+        patch['apiCosignerPublicKey'] = newModel['apiCosignerPublicKey']
+      }
+      return patch;
     }
   },
   async mounted() {
@@ -136,6 +172,7 @@ export default {
           <th>Type</th>
           <th style="width: 340px;">Vault ID</th>
           <th>Chain ID</th>
+          <th>Provider</th>
           <th style="width: 180px;">Actions</th>
         </tr>
         </thead>
@@ -145,6 +182,7 @@ export default {
           <td>{{ c.type }}</td>
           <td>{{ c.vaultId }}</td>
           <td>{{ c.network?.chainId }}</td>
+          <td>{{ c.provider }}</td>
           <td class="text-center">
             <button class="btn btn-sm btn-info" @click="editCounterparty(c.internalId)">
               Edit
@@ -173,7 +211,7 @@ export default {
 
         <div class="mb-3">
           <label class="form-label text-light">Type</label>
-          <select v-model="form.type" class="form-select" required>
+          <select v-model="form.type" class="form-select" required :disabled="editingId && form.type">
             <option disabled value="">-- Counterparty Type --</option>
             <option v-for="t in types" :key="t.code" :value="t.code">
               {{ t.code }}
@@ -181,25 +219,36 @@ export default {
           </select>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label text-light">Vault ID</label>
-          <input v-model="form.vaultId" type="text" class="form-control" required/>
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label text-light">API Cosigner Public Key</label>
-          <input v-model="form.apiCosignerPublicKey" type="text" class="form-control" required/>
-        </div>
-
         <!-- networks dropdown -->
         <div class="mb-3">
           <label class="form-label text-light">Network</label>
-          <select v-model="form.networkId" class="form-select" required>
+          <select v-model="form.networkId" class="form-select" required :disabled="editingId && form.networkId">
             <option disabled value="">-- Select Network --</option>
             <option v-for="n in networks" :key="n.id" :value="n.id">
               {{ n.name }} (Chain ID: {{ n.chainId }})
             </option>
           </select>
+        </div>
+
+        <!-- providers dropdown -->
+        <div class="mb-3">
+          <label class="form-label text-light">Provider</label>
+          <select v-model="form.provider" class="form-select" required :disabled="editingId && form.provider">
+            <option disabled value="">-- Select Provider --</option>
+            <option v-for="p in providers" :key="p" :value="p">
+              {{ p }}
+            </option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label text-light">Vault ID</label>
+          <input v-model="form.vaultId" type="text" class="form-control" :required="!editingId"/>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label text-light">API Cosigner Public Key</label>
+          <input v-model="form.apiCosignerPublicKey" type="text" class="form-control" :required="!editingId"/>
         </div>
 
         <div class="d-flex justify-content-end">

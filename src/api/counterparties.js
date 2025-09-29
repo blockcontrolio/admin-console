@@ -30,15 +30,23 @@ export function getCounterparties() {
     return request(apiBaseUrl);
 }
 
-// GET /admin/counterparties/{internalId}
-export function getCounterparty(internalId) {
-    return request(`${apiBaseUrl}/${internalId}`);
+// GET /admin/counterparties/{counterpartyId}
+export function getCounterparty(counterpartyId) {
+    return request(`${apiBaseUrl}/${counterpartyId}`);
 }
 
 // POST /admin/counterparties
 export function createCounterparty(data) {
     return request(apiBaseUrl, {
         method: 'POST',
+        body: JSON.stringify(data)
+    });
+}
+
+// EDIT /admin/counterparties/{counterpartyId}
+export function updateCounterparty(counterpartyId, data) {
+    return request(`${apiBaseUrl}/${counterpartyId}`, {
+        method: 'PATCH',
         body: JSON.stringify(data)
     });
 }
