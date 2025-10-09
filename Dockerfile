@@ -1,5 +1,6 @@
 # Build stage
 FROM node:20-slim AS builder
+
 WORKDIR /app
 
 COPY package.json ./
@@ -7,7 +8,7 @@ COPY index.html ./
 COPY vite.config.js ./
 COPY src ./src
 
-ARG API_BASE_URL=https://demo.blockcontrol.io
+ARG API_BASE_URL
 ENV VITE_API_BASE=$API_BASE_URL
 
 RUN npm install && npm run build
