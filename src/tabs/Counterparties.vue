@@ -203,16 +203,16 @@ export default {
     </div>
 
     <!-- counterparties table -->
-    <div class="table-responsive mb-4">
-      <table class="table table-dark table-striped table-bordered align-middle">
+    <div class="table-responsive">
+      <table class="table table-dark table-striped table-bordered" style="table-layout: auto;">
         <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
-          <th style="width: 250px;">Parameters</th>
+          <th>Parameters</th>
           <th>Chain ID</th>
           <th>Provider</th>
-          <th style="width: 180px;" class="nowrap">Actions</th>
+          <th>Actions</th>
         </tr>
         </thead>
         <tbody>
@@ -224,40 +224,37 @@ export default {
                 v-for="(value, key) in c.parameters"
                 :key="key"
                 class="d-flex justify-content-between align-items-center mb-1 px-2 py-1 border rounded text-light bg-dark bg-opacity-25"
-                style="font-size: 0.85rem;"
+                style="font-size: 0.85rem; width: 450px"
             >
               <span>{{ key }}: {{ value }}</span>
               <button
                   type="button"
-                  class="btn btn-sm py-0 px-1"
+                  class="btn btn-sm btn-outline-danger p-1"
                   style="font-size: 0.7rem; line-height: 1;"
                   @click.stop="removeParameter(c, key)"
               >
-                <i class="bi bi-x-square text-danger"></i>
+                ✕
               </button>
             </div>
           </td>
           <td>{{ c.networks?.[0].chainId }}</td>
           <td>{{ c.provider }}</td>
           <td class="text-center">
-            <button class="btn btn-sm btn-info" @click="editCounterparty(c.id)">
-              Edit
-            </button>
-            <span class="mx-2"></span>
-            <button class="btn btn-sm btn-warning" @click="openRegistration(c.id)">
-              Register User
-            </button>
+            <div class="d-inline-flex gap-2 flex-nowrap">
+              <button class="btn btn-sm btn-info" @click="editCounterparty(c.id)">Edit</button>
+              <button class="btn btn-sm btn-warning" @click="openRegistration(c.id)">Add User</button>
+            </div>
           </td>
         </tr>
         <tr v-if="counterparties.length === 0">
-          <td colspan="4" class="text-center">No counterparties found</td>
+          <td colspan="6" class="text-center">No counterparties found</td>
         </tr>
         </tbody>
       </table>
     </div>
 
     <!-- create / update form -->
-    <div v-if="!registeringId" class="card bg-dark border-secondary p-3 mb-4">
+    <div v-if="!registeringId" class="card bg-dark border-secondary p-3 mt-4">
       <h5 class="mb-3">{{ editingId ? 'Update Counterparty' : 'Create Counterparty' }}</h5>
       <form @submit.prevent="submitForm">
         <div class="mb-3">
@@ -296,7 +293,6 @@ export default {
             </option>
           </select>
         </div>
-
 
         <div>
           <!-- existing parameter inputs -->
@@ -339,14 +335,9 @@ export default {
           </div>
         </div>
 
-        <div class="d-flex justify-content-end">
-          <button type="submit" class="btn btn-success">
-            {{ editingId ? 'Update' : 'Create' }}
-          </button>
-          <span class="mx-2"></span>
-          <button type="button" class="btn btn-secondary" @click="resetForm">
-            Cancel
-          </button>
+        <div class="d-flex justify-content-end gap-2">
+          <button type="submit" class="btn btn-success">{{ editingId ? 'Update' : 'Create' }}</button>
+          <button type="button" class="btn btn-secondary" @click="resetForm">Cancel</button>
         </div>
       </form>
     </div>
@@ -381,14 +372,9 @@ export default {
           <input v-model="registration.confirmPassword" type="password" class="form-control" required/>
         </div>
 
-        <div class="d-flex justify-content-end">
-          <button type="submit" class="btn btn-primary">
-            Register
-          </button>
-          <span class="mx-2"></span>
-          <button type="button" class="btn btn-secondary" @click="cancelRegistration">
-            Cancel
-          </button>
+        <div class="d-flex justify-content-end gap-2">
+          <button type="submit" class="btn btn-primary">Register</button>
+          <button type="button" class="btn btn-secondary" @click="cancelRegistration">Cancel</button>
         </div>
       </form>
     </div>
