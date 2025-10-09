@@ -1,9 +1,12 @@
 <script>
 import {
   getCounterparties,
+  getParameters,
   getCounterparty,
   createCounterparty,
-  addUserToCounterparty, updateCounterparty
+  addUserToCounterparty,
+  updateCounterparty,
+  deleteParameters
 } from '../api/counterparties.js'
 import {
   getAllNetworks,
@@ -25,9 +28,11 @@ export default {
       networks: [], // store networks here
       editingId: null,
       registeringId: null,
+      newParam: '',
       form: this.emptyForm(),
       registration: this.emptyRegistration(),
-      originalData: {}
+      originalData: {},
+      availableParameters: []
     };
   },
   methods: {
@@ -35,10 +40,9 @@ export default {
       return {
         name: "",
         type: "",
-        vaultId: "",
-        apiCosignerPublicKey: null,
         networkId: "",
-        provider: ""
+        provider: "",
+        parameters: {}
       };
     },
     emptyRegistration() {
@@ -46,7 +50,8 @@ export default {
         email: "",
         password: "",
         confirmPassword: "",
-        counterpartyId: ""
+        counterpartyId: "",
+        parameters: {}
       };
     },
     async fetchCounterparties() {
@@ -56,9 +61,16 @@ export default {
         console.error('Error fetching counterparties', err);
       }
     },
-    async fetchNetworks() { // fetch networks list
+    async fetchNetworks() {
       try {
         this.networks = await getAllNetworks();
+      } catch (err) {
+        console.error('Error fetching networks', err);
+      }
+    },
+    async getParameters() {
+      try {
+        this.availableParameters = await getParameters();
       } catch (err) {
         console.error('Error fetching networks', err);
       }
@@ -71,18 +83,30 @@ export default {
         this.originalData = {
           name: c.name ?? null,
           vaultId: c.vaultId ?? null,
-          provider: c.provider ?? null
+          provider: c.provider ?? null,
+          parameters: c.parameters
         };
         this.form = {
           name: c.name,
           type: c.type,
-          vaultId: c.vaultId,
-          apiCosignerPublicKey: null,
-          networkId: c.network?.id || "",
-          provider: c.provider
+          networkId: c.networks?.[0].id || "",
+          provider: c.provider,
+          parameters: c.parameters
         };
       } catch (err) {
         console.error('Error fetching counterparty', err);
+      }
+    },
+    addParameter() {
+      if (this.newParam && !this.form.parameters.hasOwnProperty(this.newParam)) {
+        this.form.parameters = {...this.form.parameters, [this.newParam]: ''};
+        this.newParam = '';
+      }
+    },
+    removeParameter(c, key) {
+      if (confirm(`Remove parameter "${key}"?`)) {
+        deleteParameters(c.id, {parameters: [key]})
+        delete c.parameters[key];
       }
     },
     async submitForm() {
@@ -90,7 +114,13 @@ export default {
         if (!this.editingId) {
           await createCounterparty(this.form);
         } else {
-          const patch = this.buildPatch(this.form, this.originalData);
+          const patch = this.preparePatchPayload();
+          if (Object.keys(patch).length === 0) {
+            console.log('No changes detected');
+            return;
+          }
+          console.log('Sending PATCH:', patch);
+
           if (Object.keys(patch).length === 0) {
             console.log("No changes to send.");
             return;
@@ -126,28 +156,37 @@ export default {
       this.registeringId = null;
       this.registration = this.emptyRegistration();
     },
-    buildPatch(newModel, originalModel) {
+    preparePatchPayload() {
       const patch = {};
-      if (newModel['name'] !== originalModel['name']) {
-        patch['name'] = newModel['name'];
+
+      // Compare top-level fields
+      for (const key of ['name', 'provider']) {
+        if (this.form[key] !== this.originalData[key]) {
+          patch[key] = this.form[key];
+        }
       }
-      if (newModel['vaultId'] !== originalModel['vaultId']) {
-        patch['vaultId'] = newModel['vaultId'];
+
+      // Compare parameters object
+      const paramPatch = {};
+      for (const [key, value] of Object.entries(this.form.parameters)) {
+        if (this.originalData.parameters[key] !== value) {
+          paramPatch[key] = value;
+        }
       }
-      if (newModel['provider'] !== originalModel['provider']) {
-        patch['provider'] = newModel['provider'];
+
+      // Add only if parameters changed
+      if (Object.keys(paramPatch).length > 0) {
+        patch.parameters = paramPatch;
       }
-      // detect only real changes because this field not present in response
-      if (newModel['apiCosignerPublicKey']) {
-        patch['apiCosignerPublicKey'] = newModel['apiCosignerPublicKey']
-      }
+
       return patch;
-    }
+    },
   },
   async mounted() {
     await Promise.all([
       this.fetchCounterparties(),
-      this.fetchNetworks()
+      this.fetchNetworks(),
+      this.getParameters()
     ]);
   }
 };
@@ -164,44 +203,58 @@ export default {
     </div>
 
     <!-- counterparties table -->
-    <div class="table-responsive mb-4">
-      <table class="table table-dark table-striped table-bordered align-middle">
+    <div class="table-responsive">
+      <table class="table table-dark table-striped table-bordered" style="table-layout: auto;">
         <thead>
         <tr>
           <th>Name</th>
           <th>Type</th>
-          <th style="width: 340px;">Vault ID</th>
+          <th>Parameters</th>
           <th>Chain ID</th>
           <th>Provider</th>
-          <th style="width: 180px;">Actions</th>
+          <th>Actions</th>
         </tr>
         </thead>
         <tbody>
-        <tr v-for="c in counterparties" :key="c.internalId">
+        <tr v-for="c in counterparties" :key="c.id">
           <td>{{ c.name }}</td>
           <td>{{ c.type }}</td>
-          <td>{{ c.vaultId }}</td>
-          <td>{{ c.network?.chainId }}</td>
+          <td>
+            <div
+                v-for="(value, key) in c.parameters"
+                :key="key"
+                class="d-flex justify-content-between align-items-center mb-1 px-2 py-1 border rounded text-light bg-dark bg-opacity-25"
+                style="font-size: 0.85rem; width: 450px"
+            >
+              <span>{{ key }}: {{ value }}</span>
+              <button
+                  type="button"
+                  class="btn btn-sm btn-outline-danger p-1"
+                  style="font-size: 0.7rem; line-height: 1;"
+                  @click.stop="removeParameter(c, key)"
+              >
+                ✕
+              </button>
+            </div>
+          </td>
+          <td>{{ c.networks?.[0].chainId }}</td>
           <td>{{ c.provider }}</td>
           <td class="text-center">
-            <button class="btn btn-sm btn-info" @click="editCounterparty(c.internalId)">
-              Edit
-            </button>
-            <span class="mx-2"></span>
-            <button class="btn btn-sm btn-warning" @click="openRegistration(c.internalId)">
-              Register User
-            </button>
+            <div class="d-inline-flex gap-2 flex-nowrap">
+              <button class="btn btn-sm btn-info" @click="editCounterparty(c.id)">Edit</button>
+              <button class="btn btn-sm btn-warning" @click="openRegistration(c.id)">Add User</button>
+            </div>
           </td>
         </tr>
         <tr v-if="counterparties.length === 0">
-          <td colspan="4" class="text-center">No counterparties found</td>
+          <td colspan="6" class="text-center">No counterparties found</td>
         </tr>
         </tbody>
       </table>
     </div>
 
     <!-- create / update form -->
-    <div v-if="!registeringId" class="card bg-dark border-secondary p-3 mb-4">
+    <div v-if="!registeringId" class="card bg-dark border-secondary p-3 mt-4">
       <h5 class="mb-3">{{ editingId ? 'Update Counterparty' : 'Create Counterparty' }}</h5>
       <form @submit.prevent="submitForm">
         <div class="mb-3">
@@ -241,24 +294,50 @@ export default {
           </select>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label text-light">Vault ID</label>
-          <input v-model="form.vaultId" type="text" class="form-control" :required="!editingId"/>
+        <div>
+          <!-- existing parameter inputs -->
+          <div
+              v-for="(value, key) in form.parameters"
+              :key="key"
+              class="mb-3"
+          >
+            <label class="form-label text-light">{{ key }}</label>
+            <input
+                v-model="form.parameters[key]"
+                type="text"
+                class="form-control"
+                :required="!editingId"
+            />
+          </div>
+
+          <!-- add new parameter selector -->
+          <div class="d-flex align-items-center mb-3">
+            <select v-model="newParam" class="form-select me-2" style="max-width: 250px;">
+              <option disabled value="">Select parameter...</option>
+              <option
+                  v-for="option in availableParameters"
+                  :key="option"
+                  :value="option"
+                  :disabled="form.parameters.hasOwnProperty(option)"
+              >
+                {{ option }}
+              </option>
+            </select>
+
+            <button
+                class="btn btn-outline-light"
+                type="button"
+                @click="addParameter"
+                :disabled="!newParam || form.parameters.hasOwnProperty(newParam)"
+            >
+              +
+            </button>
+          </div>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label text-light">API Cosigner Public Key</label>
-          <input v-model="form.apiCosignerPublicKey" type="text" class="form-control" :required="!editingId"/>
-        </div>
-
-        <div class="d-flex justify-content-end">
-          <button type="submit" class="btn btn-success">
-            {{ editingId ? 'Update' : 'Create' }}
-          </button>
-          <span class="mx-2"></span>
-          <button type="button" class="btn btn-secondary" @click="resetForm">
-            Cancel
-          </button>
+        <div class="d-flex justify-content-end gap-2">
+          <button type="submit" class="btn btn-success">{{ editingId ? 'Update' : 'Create' }}</button>
+          <button type="button" class="btn btn-secondary" @click="resetForm">Cancel</button>
         </div>
       </form>
     </div>
@@ -273,7 +352,7 @@ export default {
           <input
               type="text"
               class="form-control"
-              :value="counterparties.find(c => c.internalId === registeringId)?.name || ''"
+              :value="counterparties.find(c => c.id === registeringId)?.name || ''"
               readonly
           />
         </div>
@@ -293,14 +372,9 @@ export default {
           <input v-model="registration.confirmPassword" type="password" class="form-control" required/>
         </div>
 
-        <div class="d-flex justify-content-end">
-          <button type="submit" class="btn btn-primary">
-            Register
-          </button>
-          <span class="mx-2"></span>
-          <button type="button" class="btn btn-secondary" @click="cancelRegistration">
-            Cancel
-          </button>
+        <div class="d-flex justify-content-end gap-2">
+          <button type="submit" class="btn btn-primary">Register</button>
+          <button type="button" class="btn btn-secondary" @click="cancelRegistration">Cancel</button>
         </div>
       </form>
     </div>

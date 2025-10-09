@@ -99,14 +99,14 @@ export default {
     </div>
 
     <!-- Networks Table -->
-    <div class="table-responsive mb-4">
+    <div class="table-responsive">
       <table class="table table-dark table-striped table-bordered align-middle">
         <thead>
         <tr>
           <th>Name</th>
           <th>Chain ID</th>
           <th>Explorer URL</th>
-          <th style="width: 100px;">Actions</th>
+          <th>Actions</th>
         </tr>
         </thead>
         <tbody>
@@ -115,9 +115,7 @@ export default {
           <td>{{ n.chainId }}</td>
           <td><a :href="n.explorerUrl" target="_blank">{{ n.explorerUrl }}</a></td>
           <td class="text-center">
-            <button class="btn btn-sm btn-info" @click="editNetwork(n.id)">
-              Edit
-            </button>
+            <button class="btn btn-sm btn-info" @click="editNetwork(n.id)">Edit</button>
           </td>
         </tr>
         <tr v-if="networks.length === 0">
@@ -128,7 +126,7 @@ export default {
     </div>
 
     <!-- Create / Update Form -->
-    <div class="card bg-dark border-secondary p-3">
+    <div class="card bg-dark border-secondary p-3 mt-4">
       <h5 class="text-light mb-3">{{ editingId ? 'Update Network' : 'Create Network' }}</h5>
       <form @submit.prevent="submitForm">
         <div class="mb-3">
@@ -169,14 +167,9 @@ export default {
           </div>
         </fieldset>
 
-        <div class="d-flex justify-content-end">
-          <button type="submit" class="btn btn-success">
-            {{ editingId ? 'Update' : 'Create' }}
-          </button>
-          <span class="mx-2"></span>
-          <button type="button" class="btn btn-secondary" @click="resetForm">
-            Cancel
-          </button>
+        <div class="d-flex justify-content-end gap-2">
+          <button type="submit" class="btn btn-success">{{ editingId ? 'Update' : 'Create' }}</button>
+          <button type="button" class="btn btn-secondary" @click="resetForm">Cancel</button>
         </div>
       </form>
     </div>

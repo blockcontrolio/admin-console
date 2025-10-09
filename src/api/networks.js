@@ -1,4 +1,4 @@
-const apiBaseUrl = import.meta.env.VITE_API_BASE + '/admin/networks' || `${window.location.origin}/admin/networks`;
+const apiBaseUrl = (import.meta.env.VITE_API_BASE || window.location.origin) + '/admin/networks';
 
 function loadAuthToken() {
     return localStorage.getItem('x-api-key');

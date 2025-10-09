@@ -1,4 +1,4 @@
-const apiBaseUrl = import.meta.env.VITE_API_BASE + '/admin/counterparties' || `${window.location.origin}/admin/counterparties`;
+const apiBaseUrl = (import.meta.env.VITE_API_BASE || window.location.origin) + '/admin/counterparties';
 
 function loadAuthToken() {
     return localStorage.getItem('x-api-key');
@@ -56,5 +56,18 @@ export function addUserToCounterparty(data) {
     return request(`${apiBaseUrl}/users`, {
         method: 'POST',
         body: JSON.stringify(data)
+    });
+}
+
+// GET /admin/counterparties/parameters
+export function getParameters() {
+    return request(`${apiBaseUrl}/parameters`);
+}
+
+// DELETE /admin/counterparties/{counterpartyId}/parameters
+export function deleteParameters(counterpartyId, parameters) {
+    return request(`${apiBaseUrl}/${counterpartyId}/parameters`, {
+        method: 'DELETE',
+        body: JSON.stringify(parameters)
     });
 }
