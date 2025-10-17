@@ -1,6 +1,5 @@
 <script>
 import {
-  getAllNetworks,
   getNetworkById,
   createNetwork,
   updateNetwork,
@@ -13,10 +12,9 @@ import ParameterForm from "./ParameterEdit.vue";
 export default {
   name: 'Networks',
   components: {ParameterForm, ParameterItem},
-  props: ['notification'],
+  props: ['networks'],
   data() {
     return {
-      networks: [],
       editingId: null,
       newParam: '',
       form: this.emptyForm(),
@@ -38,14 +36,6 @@ export default {
         },
         parameters: {}
       };
-    },
-    async fetchNetworks() {
-      try {
-        this.networks = await getAllNetworks();
-        this.$emit('data-refreshed');
-      } catch (err) {
-        console.error('Error fetching networks', err);
-      }
     },
     async getParameters() {
       try {
@@ -110,7 +100,6 @@ export default {
 
           await updateNetwork(this.editingId, this.form);
         }
-        await this.fetchNetworks();
         this.resetForm();
       } catch (err) {
         console.error('Error saving network', err);
@@ -148,11 +137,9 @@ export default {
   },
   async mounted() {
     await Promise.all([
-      this.fetchNetworks(),
       this.getParameters()
     ]);
-  },
-  emits: ['data-refreshed'],
+  }
 };
 </script>
 

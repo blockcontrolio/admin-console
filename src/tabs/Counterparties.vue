@@ -8,15 +8,13 @@ import {
   updateCounterparty,
   deleteParameters
 } from '../api/counterparties.js'
-import {
-  getAllNetworks,
-} from '../api/networks.js'
 import ParameterItem from "./ParameterItem.vue";
 import ParameterForm from "./ParameterEdit.vue";
 
 export default {
   name: 'Counterparties',
   components: {ParameterForm, ParameterItem},
+  props: ['networks'],
   data() {
     return {
       types: [
@@ -28,7 +26,6 @@ export default {
         }],
       providers: ['MOCK', 'UTILA', 'FIREBLOCKS', 'DFNS'],
       counterparties: [],
-      networks: [], // store networks here
       editingId: null,
       registeringId: null,
       newParam: '',
@@ -64,18 +61,11 @@ export default {
         console.error('Error fetching counterparties', err);
       }
     },
-    async fetchNetworks() {
-      try {
-        this.networks = await getAllNetworks();
-      } catch (err) {
-        console.error('Error fetching networks', err);
-      }
-    },
     async fetchParameters() {
       try {
         this.availableParameters = await getParameters(this.form.provider);
       } catch (err) {
-        console.error('Error fetching networks', err);
+        console.error('Error fetching parameters', err);
       }
     },
     async editCounterparty(id) {
@@ -182,8 +172,7 @@ export default {
   },
   async mounted() {
     await Promise.all([
-      this.fetchCounterparties(),
-      this.fetchNetworks()
+      this.fetchCounterparties()
     ]);
   }
 };

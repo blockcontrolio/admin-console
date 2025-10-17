@@ -1,6 +1,7 @@
 <script>
 import Networks from "./tabs/Networks.vue";
 import Counterparties from "./tabs/Counterparties.vue";
+import {getAllNetworks} from "./api/networks";
 
 export default {
   name: 'App',
@@ -9,7 +10,8 @@ export default {
     return {
       apiKey: localStorage.getItem('x-api-key') || '',
       originalApiKey: '',
-      notification: ''
+      notification: '',
+      networks: []
     }
   },
   computed: {
@@ -18,6 +20,13 @@ export default {
     }
   },
   methods: {
+    async fetchNetworks() {
+      try {
+        this.networks = await getAllNetworks();
+      } catch (err) {
+        console.error('Error fetching networks', err);
+      }
+    },
     saveKey() {
       if (this.apiKey.trim()) {
         localStorage.setItem('x-api-key', this.apiKey.trim())
@@ -30,8 +39,11 @@ export default {
       this.apiKey = ''
     }
   },
-  mounted() {
+  async mounted() {
     this.originalApiKey = this.apiKey;
+    if (this.apiKey) {
+      await this.fetchNetworks();
+    }
   }
 }
 </script>
@@ -63,7 +75,7 @@ export default {
     </div>
   </div>
 
-  <div class="container py-4">
+  <div v-if="apiKey && this.networks.length" class="container py-4">
     <ul class="nav nav-tabs" id="mainTabs" role="tablist">
       <li class="nav-item" role="presentation">
         <button
@@ -101,7 +113,7 @@ export default {
           role="tabpanel"
           aria-labelledby="networks-tab"
       >
-        <Networks @data-refreshed="this.notification = null" :notification="this.notification"/>
+        <Networks :networks="networks"/>
       </div>
       <div
           class="tab-pane fade"
@@ -109,7 +121,7 @@ export default {
           role="tabpanel"
           aria-labelledby="counterparties-tab"
       >
-        <Counterparties/>
+        <Counterparties :networks="networks"/>
       </div>
     </div>
   </div>
