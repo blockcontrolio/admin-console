@@ -68,9 +68,9 @@ export default {
         console.error('Error fetching networks', err);
       }
     },
-    async getParameters() {
+    async fetchParameters() {
       try {
-        this.availableParameters = await getParameters();
+        this.availableParameters = await getParameters(this.form.provider);
       } catch (err) {
         console.error('Error fetching networks', err);
       }
@@ -80,25 +80,30 @@ export default {
       try {
         const c = await getCounterparty(id);
         this.editingId = id;
+        // Deep clone parameters (to break the shared reference)
+        const clonedParameters = JSON.parse(JSON.stringify(c.parameters));
         this.originalData = {
           name: c.name ?? null,
-          vaultId: c.vaultId ?? null,
           provider: c.provider ?? null,
-          parameters: c.parameters
+          parameters: clonedParameters
         };
+
         this.form = {
           name: c.name,
           type: c.type,
-          networkId: c.networks?.[0].id || "",
+          networkId: c.network?.id || "",
           provider: c.provider,
-          parameters: c.parameters
+          parameters: JSON.parse(JSON.stringify(c.parameters))
         };
+        if (c.provider) {
+          await this.fetchParameters();
+        }
       } catch (err) {
         console.error('Error fetching counterparty', err);
       }
     },
     addParameter() {
-      if (this.newParam && !this.form.parameters.hasOwnProperty(this.newParam)) {
+      if (this.newParam && !this.form.parameters?.hasOwnProperty(this.newParam)) {
         this.form.parameters = {...this.form.parameters, [this.newParam]: ''};
         this.newParam = '';
       }
@@ -185,8 +190,7 @@ export default {
   async mounted() {
     await Promise.all([
       this.fetchCounterparties(),
-      this.fetchNetworks(),
-      this.getParameters()
+      this.fetchNetworks()
     ]);
   }
 };
@@ -284,9 +288,9 @@ export default {
         </div>
 
         <!-- providers dropdown -->
-        <div class="mb-3">
+        <div class="mb-4">
           <label class="form-label text-light">Provider</label>
-          <select v-model="form.provider" class="form-select" required :disabled="editingId && form.provider">
+          <select v-model="form.provider" class="form-select" required :disabled="editingId && form.provider" v-on:change="this.fetchParameters()">
             <option disabled value="">-- Select Provider --</option>
             <option v-for="p in providers" :key="p" :value="p">
               {{ p }}
@@ -310,7 +314,7 @@ export default {
             />
           </div>
 
-          <!-- add new parameter selector -->
+          <!-- add parameters selector -->
           <div class="d-flex align-items-center mb-3">
             <select v-model="newParam" class="form-select me-2" style="max-width: 250px;">
               <option disabled value="">Select parameter...</option>
@@ -318,7 +322,7 @@ export default {
                   v-for="option in availableParameters"
                   :key="option"
                   :value="option"
-                  :disabled="form.parameters.hasOwnProperty(option)"
+                  :disabled="form.parameters?.hasOwnProperty(option)"
               >
                 {{ option }}
               </option>
@@ -328,7 +332,7 @@ export default {
                 class="btn btn-outline-light"
                 type="button"
                 @click="addParameter"
-                :disabled="!newParam || form.parameters.hasOwnProperty(newParam)"
+                :disabled="!newParam || form.parameters?.hasOwnProperty(newParam)"
             >
               +
             </button>
