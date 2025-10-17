@@ -60,7 +60,10 @@ export function addUserToCounterparty(data) {
 }
 
 // GET /admin/counterparties/parameters
-export function getParameters() {
+export function getParameters(provider) {
+    if (provider) {
+        return request(`${apiBaseUrl}/parameters?provider=${provider}`);
+    }
     return request(`${apiBaseUrl}/parameters`);
 }
 
