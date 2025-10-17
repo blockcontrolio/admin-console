@@ -30,6 +30,10 @@ export function getAllNetworks() {
     return request(apiBaseUrl);
 }
 
+export function getParameters() {
+    return request(`${apiBaseUrl}/parameters`);
+}
+
 // GET /admin/networks/{id}
 export function getNetworkById(id) {
     return request(`${apiBaseUrl}/${id}`);

@@ -3,8 +3,10 @@ import {
   getAllNetworks,
   getNetworkById,
   createNetwork,
-  updateNetwork
+  updateNetwork,
+  getParameters
 } from '../api/networks.js'
+import {deleteParameters} from "../api/counterparties";
 
 export default {
   name: 'Networks',
@@ -13,7 +15,9 @@ export default {
     return {
       networks: [],
       editingId: null,
+      newParam: '',
       form: this.emptyForm(),
+      networkParameters: []
     };
   },
   methods: {
@@ -28,7 +32,8 @@ export default {
           symbol: '',
           name: '',
           decimals: ''
-        }
+        },
+        parameters: {}
       };
     },
     async fetchNetworks() {
@@ -39,21 +44,56 @@ export default {
         console.error('Error fetching networks', err);
       }
     },
+    async getParameters() {
+      try {
+        this.networkParameters = await getParameters();
+      } catch (err) {
+        console.error('Error fetching network parameters', err);
+      }
+    },
+    addParameter() {
+      if (this.newParam && !this.form.parameters.hasOwnProperty(this.newParam)) {
+        this.form.parameters = {...this.form.parameters, [this.newParam]: ''};
+        this.newParam = '';
+      }
+    },
+    removeParameter(c, key) {
+      if (confirm(`Remove parameter "${key}"?`)) {
+        deleteParameters(c.id, {parameters: [key]})
+        delete c.parameters[key];
+      }
+    },
     async editNetwork(id) {
       try {
         const net = await getNetworkById(id);
         this.editingId = id;
+
+        // Deep clone parameters (to break the shared reference)
+        const clonedParameters = JSON.parse(JSON.stringify(net.parameters));
+        this.originalData = {
+          name: net.name ?? null,
+          chainId: net.chainId,
+          rpcUrl: net.rpcUrl,
+          explorerUrl: net.explorerUrl,
+          wsUrl: net.wsUrl,
+          nativeAsset: {
+            symbol: net.nativeAsset?.symbol ?? null,
+            name: net.nativeAsset?.name ?? null
+          },
+          parameters: clonedParameters
+        };
+
         this.form = {
           name: net.name,
           chainId: net.chainId,
-          rpcUrl: '', // not in NetworkResponse, user must re-enter if editing
+          rpcUrl: net.rpcUrl,
           explorerUrl: net.explorerUrl,
-          wsUrl: '',
+          wsUrl: net.wsUrl,
           nativeAsset: {
-            symbol: '',
-            name: '',
-            decimals: ''
-          }
+            symbol: net.nativeAsset?.symbol,
+            name: net.nativeAsset?.name
+          },
+          parameters: JSON.parse(JSON.stringify(net.parameters))
         };
       } catch (err) {
         console.error('Error fetching network', err);
@@ -61,10 +101,17 @@ export default {
     },
     async submitForm() {
       try {
-        if (this.editingId) {
-          await updateNetwork(this.editingId, this.form);
-        } else {
+        if (!this.editingId) {
           await createNetwork(this.form);
+        } else {
+          const patch = this.preparePatchPayload();
+          if (Object.keys(patch).length === 0) {
+            console.log("No changes to send.");
+            return;
+          }
+          console.log('Sending update network:', patch);
+
+          await updateNetwork(this.editingId, this.form);
         }
         await this.fetchNetworks();
         this.resetForm();
@@ -75,10 +122,38 @@ export default {
     resetForm() {
       this.editingId = null;
       this.form = this.emptyForm();
-    }
+    },
+    preparePatchPayload() {
+      const patch = {};
+
+      // Compare top-level fields
+      for (const key of ['name', 'rpcUrl', 'explorerUrl', 'wsUrl']) {
+        if (this.form[key] !== this.originalData[key]) {
+          patch[key] = this.form[key];
+        }
+      }
+
+      // Compare parameters object
+      const paramPatch = {};
+      for (const [key, value] of Object.entries(this.form.parameters)) {
+        if (this.originalData.parameters[key] !== value) {
+          paramPatch[key] = value;
+        }
+      }
+
+      // Add only if parameters changed
+      if (Object.keys(paramPatch).length > 0) {
+        patch.parameters = paramPatch;
+      }
+
+      return patch;
+    },
   },
-  mounted() {
-    this.fetchNetworks();
+  async mounted() {
+    await Promise.all([
+      this.fetchNetworks(),
+      this.getParameters()
+    ]);
   },
   emits: ['data-refreshed'],
 };
@@ -106,6 +181,7 @@ export default {
           <th>Name</th>
           <th>Chain ID</th>
           <th>Explorer URL</th>
+          <th>Parameters</th>
           <th>Actions</th>
         </tr>
         </thead>
@@ -114,6 +190,9 @@ export default {
           <td>{{ n.name }}</td>
           <td>{{ n.chainId }}</td>
           <td><a :href="n.explorerUrl" target="_blank">{{ n.explorerUrl }}</a></td>
+          <td>
+            <span v-for="p in n.parameters">{{p}}</span>
+          </td>
           <td class="text-center">
             <button class="btn btn-sm btn-info" @click="editNetwork(n.id)">Edit</button>
           </td>
@@ -155,7 +234,7 @@ export default {
         </div>
 
         <!-- Optional Native Asset -->
-        <fieldset class="border p-3 mb-3">
+        <fieldset class="border p-3 mb-4">
           <legend class="text-light float-none w-auto mb-0 fs-6">Native Asset (optional)</legend>
           <div class="row g-2 mt-1">
             <div class="col-md-6">
@@ -166,6 +245,47 @@ export default {
             </div>
           </div>
         </fieldset>
+
+        <div>
+          <!-- existing parameter inputs -->
+          <div
+              v-for="(value, key) in form.parameters"
+              :key="key"
+              class="mb-3"
+          >
+            <label class="form-label text-light">{{ key }}</label>
+            <input
+                v-model="form.parameters[key]"
+                type="text"
+                class="form-control"
+                :required="!editingId"
+            />
+          </div>
+
+          <!-- add parameters selector -->
+          <div class="d-flex align-items-center mb-3">
+            <select v-model="newParam" class="form-select me-2" style="max-width: 250px;">
+              <option disabled value="">Select parameter...</option>
+              <option
+                  v-for="option in networkParameters"
+                  :key="option"
+                  :value="option"
+                  :disabled="form.parameters?.hasOwnProperty(option)"
+              >
+                {{ option }}
+              </option>
+            </select>
+
+            <button
+                class="btn btn-outline-light"
+                type="button"
+                @click="addParameter"
+                :disabled="!newParam || form.parameters?.hasOwnProperty(newParam)"
+            >
+              +
+            </button>
+          </div>
+        </div>
 
         <div class="d-flex justify-content-end gap-2">
           <button type="submit" class="btn btn-success">{{ editingId ? 'Update' : 'Create' }}</button>
