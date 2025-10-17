@@ -54,3 +54,12 @@ export function updateNetwork(id, data) {
         body: JSON.stringify(data)
     });
 }
+
+// DELETE /admin/networks/{networkId}/parameters
+export function deleteParameters(networkId, parameters) {
+    return request(`${apiBaseUrl}/${networkId}/parameters`, {
+        method: 'DELETE',
+        body: JSON.stringify(parameters)
+    });
+}
+

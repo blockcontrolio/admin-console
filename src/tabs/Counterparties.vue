@@ -11,9 +11,12 @@ import {
 import {
   getAllNetworks,
 } from '../api/networks.js'
+import ParameterItem from "./ParameterItem.vue";
+import ParameterForm from "./ParameterEdit.vue";
 
 export default {
   name: 'Counterparties',
+  components: {ParameterForm, ParameterItem},
   data() {
     return {
       types: [
@@ -102,12 +105,6 @@ export default {
         console.error('Error fetching counterparty', err);
       }
     },
-    addParameter() {
-      if (this.newParam && !this.form.parameters?.hasOwnProperty(this.newParam)) {
-        this.form.parameters = {...this.form.parameters, [this.newParam]: ''};
-        this.newParam = '';
-      }
-    },
     removeParameter(c, key) {
       if (confirm(`Remove parameter "${key}"?`)) {
         deleteParameters(c.id, {parameters: [key]})
@@ -121,15 +118,11 @@ export default {
         } else {
           const patch = this.preparePatchPayload();
           if (Object.keys(patch).length === 0) {
-            console.log('No changes detected');
-            return;
-          }
-          console.log('Sending PATCH:', patch);
-
-          if (Object.keys(patch).length === 0) {
             console.log("No changes to send.");
             return;
           }
+          console.log('Sending update counterparty:', patch);
+
           await updateCounterparty(this.editingId, patch);
         }
         await this.fetchCounterparties();
@@ -198,12 +191,9 @@ export default {
 
 <template>
   <div class="counterparties-tab container-fluid py-3">
-    <!-- title & refresh -->
+    <!-- title -->
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h4 class="m-0">Counterparties</h4>
-      <button class="btn btn-sm btn-primary" @click="fetchCounterparties">
-        Refresh
-      </button>
     </div>
 
     <!-- counterparties table -->
@@ -213,9 +203,9 @@ export default {
         <tr>
           <th>Name</th>
           <th>Type</th>
-          <th>Parameters</th>
-          <th>Chain ID</th>
+          <th>Network</th>
           <th>Provider</th>
+          <th>Parameters</th>
           <th>Actions</th>
         </tr>
         </thead>
@@ -223,26 +213,17 @@ export default {
         <tr v-for="c in counterparties" :key="c.id">
           <td>{{ c.name }}</td>
           <td>{{ c.type }}</td>
+          <td>{{ c.network.name }}</td>
+          <td>{{ c.provider }}</td>
           <td>
-            <div
+            <ParameterItem
                 v-for="(value, key) in c.parameters"
                 :key="key"
-                class="d-flex justify-content-between align-items-center mb-1 px-2 py-1 border rounded text-light bg-dark bg-opacity-25"
-                style="font-size: 0.85rem; width: 450px"
-            >
-              <span>{{ key }}: {{ value }}</span>
-              <button
-                  type="button"
-                  class="btn btn-sm btn-outline-danger p-1"
-                  style="font-size: 0.7rem; line-height: 1;"
-                  @click.stop="removeParameter(c, key)"
-              >
-                ✕
-              </button>
-            </div>
+                :keyName="key"
+                :value="value"
+                @remove="removeParameter(c, $event)"
+            />
           </td>
-          <td>{{ c.networks?.[0].chainId }}</td>
-          <td>{{ c.provider }}</td>
           <td class="text-center">
             <div class="d-inline-flex gap-2 flex-nowrap">
               <button class="btn btn-sm btn-info" @click="editCounterparty(c.id)">Edit</button>
@@ -298,46 +279,11 @@ export default {
           </select>
         </div>
 
-        <div>
-          <!-- existing parameter inputs -->
-          <div
-              v-for="(value, key) in form.parameters"
-              :key="key"
-              class="mb-3"
-          >
-            <label class="form-label text-light">{{ key }}</label>
-            <input
-                v-model="form.parameters[key]"
-                type="text"
-                class="form-control"
-                :required="!editingId"
-            />
-          </div>
-
-          <!-- add parameters selector -->
-          <div class="d-flex align-items-center mb-3">
-            <select v-model="newParam" class="form-select me-2" style="max-width: 250px;">
-              <option disabled value="">Select parameter...</option>
-              <option
-                  v-for="option in availableParameters"
-                  :key="option"
-                  :value="option"
-                  :disabled="form.parameters?.hasOwnProperty(option)"
-              >
-                {{ option }}
-              </option>
-            </select>
-
-            <button
-                class="btn btn-outline-light"
-                type="button"
-                @click="addParameter"
-                :disabled="!newParam || form.parameters?.hasOwnProperty(newParam)"
-            >
-              +
-            </button>
-          </div>
-        </div>
+        <ParameterForm
+            v-model="form.parameters"
+            :parameters="availableParameters"
+            :editingId="editingId"
+        />
 
         <div class="d-flex justify-content-end gap-2">
           <button type="submit" class="btn btn-success">{{ editingId ? 'Update' : 'Create' }}</button>

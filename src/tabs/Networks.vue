@@ -4,12 +4,15 @@ import {
   getNetworkById,
   createNetwork,
   updateNetwork,
-  getParameters
+  getParameters,
+  deleteParameters
 } from '../api/networks.js'
-import {deleteParameters} from "../api/counterparties";
+import ParameterItem from "./ParameterItem.vue";
+import ParameterForm from "./ParameterEdit.vue";
 
 export default {
   name: 'Networks',
+  components: {ParameterForm, ParameterItem},
   props: ['notification'],
   data() {
     return {
@@ -51,16 +54,10 @@ export default {
         console.error('Error fetching network parameters', err);
       }
     },
-    addParameter() {
-      if (this.newParam && !this.form.parameters.hasOwnProperty(this.newParam)) {
-        this.form.parameters = {...this.form.parameters, [this.newParam]: ''};
-        this.newParam = '';
-      }
-    },
-    removeParameter(c, key) {
+    removeParameter(n, key) {
       if (confirm(`Remove parameter "${key}"?`)) {
-        deleteParameters(c.id, {parameters: [key]})
-        delete c.parameters[key];
+        deleteParameters(n.id, {parameters: [key]})
+        delete n.parameters[key];
       }
     },
     async editNetwork(id) {
@@ -161,19 +158,12 @@ export default {
 
 <template>
   <div class="networks-tab container-fluid py-3">
-    <!-- Title & Refresh -->
+    <!-- title -->
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h4 class="m-0">Networks</h4>
-      <button
-          class="btn btn-sm"
-          @click="fetchNetworks()"
-          :class="this.notification && this.notification.includes('Refresh') ? 'btn-warning' : 'btn-primary'"
-      >
-        Refresh
-      </button>
     </div>
 
-    <!-- Networks Table -->
+    <!-- networks table -->
     <div class="table-responsive">
       <table class="table table-dark table-striped table-bordered align-middle">
         <thead>
@@ -191,7 +181,13 @@ export default {
           <td>{{ n.chainId }}</td>
           <td><a :href="n.explorerUrl" target="_blank">{{ n.explorerUrl }}</a></td>
           <td>
-            <span v-for="p in n.parameters">{{p}}</span>
+            <ParameterItem
+                v-for="(value, key) in n.parameters"
+                :key="key"
+                :keyName="key"
+                :value="value"
+                @remove="removeParameter(n, $event)"
+            />
           </td>
           <td class="text-center">
             <button class="btn btn-sm btn-info" @click="editNetwork(n.id)">Edit</button>
@@ -204,7 +200,7 @@ export default {
       </table>
     </div>
 
-    <!-- Create / Update Form -->
+    <!-- create / update form -->
     <div class="card bg-dark border-secondary p-3 mt-4">
       <h5 class="text-light mb-3">{{ editingId ? 'Update Network' : 'Create Network' }}</h5>
       <form @submit.prevent="submitForm">
@@ -246,46 +242,11 @@ export default {
           </div>
         </fieldset>
 
-        <div>
-          <!-- existing parameter inputs -->
-          <div
-              v-for="(value, key) in form.parameters"
-              :key="key"
-              class="mb-3"
-          >
-            <label class="form-label text-light">{{ key }}</label>
-            <input
-                v-model="form.parameters[key]"
-                type="text"
-                class="form-control"
-                :required="!editingId"
-            />
-          </div>
-
-          <!-- add parameters selector -->
-          <div class="d-flex align-items-center mb-3">
-            <select v-model="newParam" class="form-select me-2" style="max-width: 250px;">
-              <option disabled value="">Select parameter...</option>
-              <option
-                  v-for="option in networkParameters"
-                  :key="option"
-                  :value="option"
-                  :disabled="form.parameters?.hasOwnProperty(option)"
-              >
-                {{ option }}
-              </option>
-            </select>
-
-            <button
-                class="btn btn-outline-light"
-                type="button"
-                @click="addParameter"
-                :disabled="!newParam || form.parameters?.hasOwnProperty(newParam)"
-            >
-              +
-            </button>
-          </div>
-        </div>
+        <ParameterForm
+            v-model="form.parameters"
+            :parameters="networkParameters"
+            :editingId="editingId"
+        />
 
         <div class="d-flex justify-content-end gap-2">
           <button type="submit" class="btn btn-success">{{ editingId ? 'Update' : 'Create' }}</button>
