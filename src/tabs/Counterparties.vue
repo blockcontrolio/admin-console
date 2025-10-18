@@ -1,43 +1,332 @@
 <script>
 import {
   getCounterparties,
+  getParameters,
   getCounterparty,
   createCounterparty,
-  addUserToCounterparty
+  addUserToCounterparty,
+  updateCounterparty,
+  deleteParameters
 } from '../api/counterparties.js'
+import ParameterItem from "./ParameterItem.vue";
+import ParameterForm from "./ParameterEdit.vue";
 
 export default {
   name: 'Counterparties',
+  components: {ParameterForm, ParameterItem},
+  props: ['networks'],
   data() {
     return {
-      counterparties: []
-    }
-  },
-  async mounted() {
-    try {
-      this.counterparties = await getCounterparties()
-    } catch (err) {
-      console.error('Failed to load counterparties', err)
-    }
+      types: [
+        {
+          code: 'EMI'
+        },
+        {
+          code: 'LSP'
+        }],
+      providers: ['MOCK', 'UTILA', 'FIREBLOCKS', 'DFNS'],
+      counterparties: [],
+      editingId: null,
+      registeringId: null,
+      newParam: '',
+      form: this.emptyForm(),
+      registration: this.emptyRegistration(),
+      originalData: {},
+      availableParameters: []
+    };
   },
   methods: {
-    async fetchCounterparty(id) {
-      return await getCounterparty(id)
+    emptyForm() {
+      return {
+        name: "",
+        type: "",
+        networkId: "",
+        provider: "",
+        parameters: {}
+      };
     },
-    async addCounterparty(data) {
-      return await createCounterparty(data)
+    emptyRegistration() {
+      return {
+        email: "",
+        password: "",
+        confirmPassword: "",
+        counterpartyId: "",
+        parameters: {}
+      };
     },
-    async registerUser(data) {
-      return await addUserToCounterparty(data)
-    }
+    async fetchCounterparties() {
+      try {
+        this.counterparties = await getCounterparties();
+      } catch (err) {
+        console.error('Error fetching counterparties', err);
+      }
+    },
+    async fetchParameters() {
+      try {
+        this.availableParameters = await getParameters(this.form.provider);
+      } catch (err) {
+        console.error('Error fetching parameters', err);
+      }
+    },
+    async editCounterparty(id) {
+      this.registeringId = null;
+      try {
+        const c = await getCounterparty(id);
+        this.editingId = id;
+        // Deep clone parameters (to break the shared reference)
+        const clonedParameters = JSON.parse(JSON.stringify(c.parameters));
+        this.originalData = {
+          name: c.name ?? null,
+          provider: c.provider ?? null,
+          parameters: clonedParameters
+        };
+
+        this.form = {
+          name: c.name,
+          type: c.type,
+          networkId: c.network?.id || "",
+          provider: c.provider,
+          parameters: JSON.parse(JSON.stringify(c.parameters))
+        };
+        if (c.provider) {
+          await this.fetchParameters();
+        }
+      } catch (err) {
+        console.error('Error fetching counterparty', err);
+      }
+    },
+    removeParameter(c, key) {
+      if (confirm(`Remove parameter "${key}"?`)) {
+        deleteParameters(c.id, {parameters: [key]})
+        delete c.parameters[key];
+      }
+    },
+    async submitForm() {
+      try {
+        if (!this.editingId) {
+          await createCounterparty(this.form);
+        } else {
+          const patch = this.preparePatchPayload();
+          if (Object.keys(patch).length === 0) {
+            console.log("No changes to send.");
+            return;
+          }
+          console.log('Sending update counterparty:', patch);
+
+          await updateCounterparty(this.editingId, patch);
+        }
+        await this.fetchCounterparties();
+        this.resetForm();
+      } catch (err) {
+        console.error('Error saving counterparty', err);
+      }
+    },
+    resetForm() {
+      this.editingId = null;
+      this.form = this.emptyForm();
+      this.originalData = {};
+    },
+    openRegistration(counterpartyId) {
+      this.editingId = null;
+      this.registeringId = counterpartyId;
+      this.registration = this.emptyRegistration();
+      this.registration.counterpartyId = counterpartyId;
+    },
+    async submitRegistration() {
+      try {
+        await addUserToCounterparty(this.registration);
+        this.cancelRegistration();
+      } catch (err) {
+        console.error('Error registering user', err);
+      }
+    },
+    cancelRegistration() {
+      this.registeringId = null;
+      this.registration = this.emptyRegistration();
+    },
+    preparePatchPayload() {
+      const patch = {};
+
+      // Compare top-level fields
+      for (const key of ['name', 'provider']) {
+        if (this.form[key] !== this.originalData[key]) {
+          patch[key] = this.form[key];
+        }
+      }
+
+      // Compare parameters object
+      const paramPatch = {};
+      for (const [key, value] of Object.entries(this.form.parameters)) {
+        if (this.originalData.parameters[key] !== value) {
+          paramPatch[key] = value;
+        }
+      }
+
+      // Add only if parameters changed
+      if (Object.keys(paramPatch).length > 0) {
+        patch.parameters = paramPatch;
+      }
+
+      return patch;
+    },
+  },
+  async mounted() {
+    await Promise.all([
+      this.fetchCounterparties()
+    ]);
   }
-}
+};
 </script>
 
 <template>
+  <div class="counterparties-tab container-fluid py-3">
+    <!-- title -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="m-0">Counterparties</h4>
+    </div>
 
+    <!-- counterparties table -->
+    <div class="table-responsive">
+      <table class="table table-dark table-striped table-bordered" style="table-layout: auto;">
+        <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Network</th>
+          <th>Provider</th>
+          <th>Parameters</th>
+          <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="c in counterparties" :key="c.id">
+          <td>{{ c.name }}</td>
+          <td>{{ c.type }}</td>
+          <td>{{ c.network.name }}</td>
+          <td>{{ c.provider }}</td>
+          <td>
+            <ParameterItem
+                v-for="(value, key) in c.parameters"
+                :key="key"
+                :keyName="key"
+                :value="value"
+                @remove="removeParameter(c, $event)"
+            />
+          </td>
+          <td class="text-center">
+            <div class="d-inline-flex gap-2 flex-nowrap">
+              <button class="btn btn-sm btn-info" @click="editCounterparty(c.id)">Edit</button>
+              <button class="btn btn-sm btn-warning" @click="openRegistration(c.id)">Add User</button>
+            </div>
+          </td>
+        </tr>
+        <tr v-if="counterparties.length === 0">
+          <td colspan="6" class="text-center">No counterparties found</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- create / update form -->
+    <div v-if="!registeringId" class="card bg-dark border-secondary p-3 mt-4">
+      <h5 class="mb-3">{{ editingId ? 'Update Counterparty' : 'Create Counterparty' }}</h5>
+      <form @submit.prevent="submitForm">
+        <div class="mb-3">
+          <label class="form-label text-light">Name</label>
+          <input v-model="form.name" type="text" class="form-control" required/>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label text-light">Type</label>
+          <select v-model="form.type" class="form-select" required :disabled="editingId && form.type">
+            <option disabled value="">-- Counterparty Type --</option>
+            <option v-for="t in types" :key="t.code" :value="t.code">
+              {{ t.code }}
+            </option>
+          </select>
+        </div>
+
+        <!-- networks dropdown -->
+        <div class="mb-3">
+          <label class="form-label text-light">Network</label>
+          <select v-model="form.networkId" class="form-select" required :disabled="editingId && form.networkId">
+            <option disabled value="">-- Select Network --</option>
+            <option v-for="n in networks" :key="n.id" :value="n.id">
+              {{ n.name }} (Chain ID: {{ n.chainId }})
+            </option>
+          </select>
+        </div>
+
+        <!-- providers dropdown -->
+        <div class="mb-4">
+          <label class="form-label text-light">Provider</label>
+          <select v-model="form.provider" class="form-select" required :disabled="editingId && form.provider" v-on:change="this.fetchParameters()">
+            <option disabled value="">-- Select Provider --</option>
+            <option v-for="p in providers" :key="p" :value="p">
+              {{ p }}
+            </option>
+          </select>
+        </div>
+
+        <ParameterForm
+            v-model="form.parameters"
+            :parameters="availableParameters"
+            :editingId="editingId"
+        />
+
+        <div class="d-flex justify-content-end gap-2">
+          <button type="submit" class="btn btn-success">{{ editingId ? 'Update' : 'Create' }}</button>
+          <button type="button" class="btn btn-secondary" @click="resetForm">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- user registration form -->
+    <div v-if="registeringId" class="card bg-dark border-secondary p-3">
+      <h5 class="mb-3">Register User for Counterparty</h5>
+      <form @submit.prevent="submitRegistration">
+
+        <div class="mb-3">
+          <label class="form-label text-light">Counterparty</label>
+          <input
+              type="text"
+              class="form-control"
+              :value="counterparties.find(c => c.id === registeringId)?.name || ''"
+              readonly
+          />
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label text-light">Email</label>
+          <input v-model="registration.email" type="email" class="form-control" required/>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label text-light">Password</label>
+          <input v-model="registration.password" type="password" class="form-control" required/>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label text-light">Confirm Password</label>
+          <input v-model="registration.confirmPassword" type="password" class="form-control" required/>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+          <button type="submit" class="btn btn-primary">Register</button>
+          <button type="button" class="btn btn-secondary" @click="cancelRegistration">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </template>
 
 <style scoped>
+.counterparties-tab .table a {
+  color: var(--bs-primary);
+  text-decoration: none;
+}
 
+.counterparties-tab .table a:hover {
+  text-decoration: underline;
+}
 </style>

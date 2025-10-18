@@ -60,6 +60,8 @@ body {
     border-bottom: 1px solid #333;
 }
 .table td, .table th {
+    text-overflow: ellipsis;
+    overflow: hidden;
     border-color: #333;
 }
 
@@ -95,4 +97,16 @@ a {
 }
 a:hover {
     color: #00b6d6;
+}
+
+/* disable spinner for numeric inputs */
+/* chrome, safari, edge, opera */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+/* firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
 }

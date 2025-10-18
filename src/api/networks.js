@@ -1,13 +1,17 @@
-const apiBaseUrl = import.meta.env.VITE_API_BASE + '/admin/networks' || `${window.location.origin}/admin/networks`;
+const apiBaseUrl = (import.meta.env.VITE_API_BASE || window.location.origin) + '/admin/networks';
 
 function loadAuthToken() {
-    return localStorage.getItem('x-api-key') || '';
+    return localStorage.getItem('x-api-key');
 }
 
 async function request(url, options = {}) {
+    let token = loadAuthToken();
+    if (!token) {
+        throw new Error('Token not set!')
+    }
     const headers = {
         'Content-Type': 'application/json',
-        'X-API-KEY': loadAuthToken(),
+        'X-API-KEY': token,
         ...(options.headers || {})
     };
 
@@ -18,17 +22,16 @@ async function request(url, options = {}) {
         throw new Error(`API request failed: ${response.status} ${errorBody}`);
     }
 
-    // try JSON, fallback to text
-    try {
-        return await response.json();
-    } catch {
-        return await response.text();
-    }
+    return await response.json();
 }
 
 // GET /admin/networks
 export function getAllNetworks() {
     return request(apiBaseUrl);
+}
+
+export function getParameters() {
+    return request(`${apiBaseUrl}/parameters`);
 }
 
 // GET /admin/networks/{id}
@@ -51,3 +54,12 @@ export function updateNetwork(id, data) {
         body: JSON.stringify(data)
     });
 }
+
+// DELETE /admin/networks/{networkId}/parameters
+export function deleteParameters(networkId, parameters) {
+    return request(`${apiBaseUrl}/${networkId}/parameters`, {
+        method: 'DELETE',
+        body: JSON.stringify(parameters)
+    });
+}
+
