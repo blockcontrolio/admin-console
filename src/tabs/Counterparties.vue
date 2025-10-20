@@ -1,15 +1,17 @@
 <script>
 import {
-  getCounterparties,
-  getParameters,
-  getCounterparty,
-  createCounterparty,
   addUserToCounterparty,
-  updateCounterparty,
-  deleteParameters
+  createCounterparty,
+  deleteParameters,
+  fetchCounterparties,
+  fetchCounterparty,
+  fetchParameters,
+  fetchProviders,
+  updateCounterparty
 } from '../api/counterparties.js'
 import ParameterItem from "./ParameterItem.vue";
 import ParameterForm from "./ParameterEdit.vue";
+import {markRaw} from "vue";
 
 export default {
   name: 'Counterparties',
@@ -24,72 +26,60 @@ export default {
         {
           code: 'LSP'
         }],
-      providers: ['MOCK', 'UTILA', 'FIREBLOCKS', 'DFNS'],
+      providers: ['MOCK', 'MPC_VAULT', 'UTILA', 'FIREBLOCKS', 'DFNS'],
       counterparties: [],
+      showForm: "create_counterparty", // edit_counterparty, add_user
       editingId: null,
-      registeringId: null,
-      newParam: '',
-      form: this.emptyForm(),
-      registration: this.emptyRegistration(),
-      originalData: {},
+      newParam: "",
+      counterpartyForm: this.emptyForm(),
+      originalCounterpartyData: {},
+      userRegistration: {},
       availableParameters: []
     };
   },
   methods: {
-    emptyForm() {
-      return {
-        name: "",
-        type: "",
-        networkId: "",
-        provider: "",
-        parameters: {}
-      };
-    },
-    emptyRegistration() {
-      return {
-        email: "",
-        password: "",
-        confirmPassword: "",
-        counterpartyId: "",
-        parameters: {}
-      };
-    },
-    async fetchCounterparties() {
+    async getCounterparties() {
       try {
-        this.counterparties = await getCounterparties();
+        this.counterparties = await fetchCounterparties();
       } catch (err) {
         console.error('Error fetching counterparties', err);
       }
     },
-    async fetchParameters() {
+    async getProviders() {
       try {
-        this.availableParameters = await getParameters(this.form.provider);
+        this.providers = await fetchProviders();
+      } catch (err) {
+        console.error('Error fetching providers', err);
+      }
+    },
+    async getParameters() {
+      try {
+        this.availableParameters = await fetchParameters(this.counterpartyForm.provider);
       } catch (err) {
         console.error('Error fetching parameters', err);
       }
     },
     async editCounterparty(id) {
-      this.registeringId = null;
+      this.showForm = "edit_counterparty";
+      this.editingId = id;
       try {
-        const c = await getCounterparty(id);
-        this.editingId = id;
-        // Deep clone parameters (to break the shared reference)
-        const clonedParameters = JSON.parse(JSON.stringify(c.parameters));
-        this.originalData = {
-          name: c.name ?? null,
-          provider: c.provider ?? null,
-          parameters: clonedParameters
-        };
-
-        this.form = {
-          name: c.name,
-          type: c.type,
-          networkId: c.network?.id || "",
-          provider: c.provider,
-          parameters: JSON.parse(JSON.stringify(c.parameters))
-        };
-        if (c.provider) {
-          await this.fetchParameters();
+        const counterparty = await fetchCounterparty(id);
+        this.originalCounterpartyData = markRaw({
+          name: counterparty.name,
+          type: counterparty.type,
+          networkId: counterparty.network.id,
+          provider: counterparty.provider,
+          parameters: counterparty.parameters
+        });
+        this.counterpartyForm = markRaw({
+          name: counterparty.name,
+          type: counterparty.type,
+          networkId: counterparty.network.id,
+          provider: counterparty.provider,
+          parameters: counterparty.parameters
+        });
+        if (counterparty.provider) {
+          await this.getParameters();
         }
       } catch (err) {
         console.error('Error fetching counterparty', err);
@@ -104,7 +94,7 @@ export default {
     async submitForm() {
       try {
         if (!this.editingId) {
-          await createCounterparty(this.form);
+          await createCounterparty(this.counterpartyForm);
         } else {
           const patch = this.preparePatchPayload();
           if (Object.keys(patch).length === 0) {
@@ -115,49 +105,72 @@ export default {
 
           await updateCounterparty(this.editingId, patch);
         }
-        await this.fetchCounterparties();
-        this.resetForm();
+        this.resetCounterpartyForm();
+        await this.getCounterparties();
       } catch (err) {
         console.error('Error saving counterparty', err);
       }
     },
-    resetForm() {
+    resetCounterpartyForm() {
       this.editingId = null;
-      this.form = this.emptyForm();
-      this.originalData = {};
+      this.showForm = "create_counterparty";
+      this.counterpartyForm = this.emptyForm();
+      this.originalCounterpartyData = {};
     },
     openRegistration(counterpartyId) {
-      this.editingId = null;
-      this.registeringId = counterpartyId;
-      this.registration = this.emptyRegistration();
-      this.registration.counterpartyId = counterpartyId;
+      this.editingId = counterpartyId;
+      this.showForm = "add_user";
+      this.userRegistration = markRaw({
+        email: "",
+        password: "",
+        confirmPassword: "",
+        counterpartyId: "",
+        parameters: {}
+      });
+      this.userRegistration.counterpartyId = counterpartyId;
     },
     async submitRegistration() {
       try {
-        await addUserToCounterparty(this.registration);
-        this.cancelRegistration();
+        await addUserToCounterparty(this.userRegistration);
+        this.resetUserRegistrationForm();
       } catch (err) {
         console.error('Error registering user', err);
       }
     },
-    cancelRegistration() {
-      this.registeringId = null;
-      this.registration = this.emptyRegistration();
+    resetUserRegistrationForm() {
+      this.editingId = null;
+      this.userRegistration = markRaw({
+        email: "",
+        password: "",
+        confirmPassword: "",
+        counterpartyId: "",
+        parameters: {}
+      });
+      this.showForm = "create_counterparty";
+    },
+    emptyForm() {
+      return markRaw({
+        name: "",
+        type: "",
+        networkId: "",
+        provider: "",
+        parameters: {}
+      });
     },
     preparePatchPayload() {
       const patch = {};
 
       // Compare top-level fields
       for (const key of ['name', 'provider']) {
-        if (this.form[key] !== this.originalData[key]) {
-          patch[key] = this.form[key];
+        if (this.counterpartyForm[key] !== this.originalCounterpartyData[key]) {
+          patch[key] = this.counterpartyForm[key];
         }
       }
 
       // Compare parameters object
       const paramPatch = {};
-      for (const [key, value] of Object.entries(this.form.parameters)) {
-        if (this.originalData.parameters[key] !== value) {
+      for (const [key, value] of Object.entries(this.counterpartyForm.parameters)) {
+        if (this.originalCounterpartyData.parameters[key] !== value) {
           paramPatch[key] = value;
         }
       }
@@ -170,9 +183,21 @@ export default {
       return patch;
     },
   },
+  computed: {
+    isFormValid() {
+      const f = this.counterpartyForm;
+      return (
+          f.name.trim() !== "" &&
+          f.type !== "" &&
+          f.networkId !== "" &&
+          f.provider !== ""
+      );
+    },
+  },
   async mounted() {
     await Promise.all([
-      this.fetchCounterparties()
+      this.getCounterparties(),
+      this.getProviders()
     ]);
   }
 };
@@ -228,17 +253,17 @@ export default {
     </div>
 
     <!-- create / update form -->
-    <div v-if="!registeringId" class="card bg-dark border-secondary p-3 mt-4">
+    <div v-if="(showForm === 'create_counterparty' || showForm === 'edit_counterparty') && providers.length" class="card bg-dark border-secondary p-3 mt-4">
       <h5 class="mb-3">{{ editingId ? 'Update Counterparty' : 'Create Counterparty' }}</h5>
       <form @submit.prevent="submitForm">
         <div class="mb-3">
           <label class="form-label text-light">Name</label>
-          <input v-model="form.name" type="text" class="form-control" required/>
+          <input v-model="counterpartyForm.name" type="text" class="form-control" required/>
         </div>
 
         <div class="mb-3">
           <label class="form-label text-light">Type</label>
-          <select v-model="form.type" class="form-select" required :disabled="editingId && form.type">
+          <select v-model="counterpartyForm.type" class="form-select" required :disabled="editingId && counterpartyForm.type">
             <option disabled value="">-- Counterparty Type --</option>
             <option v-for="t in types" :key="t.code" :value="t.code">
               {{ t.code }}
@@ -249,10 +274,10 @@ export default {
         <!-- networks dropdown -->
         <div class="mb-3">
           <label class="form-label text-light">Network</label>
-          <select v-model="form.networkId" class="form-select" required :disabled="editingId && form.networkId">
+          <select v-model="counterpartyForm.networkId" class="form-select" required :disabled="editingId && counterpartyForm.networkId">
             <option disabled value="">-- Select Network --</option>
-            <option v-for="n in networks" :key="n.id" :value="n.id">
-              {{ n.name }} (Chain ID: {{ n.chainId }})
+            <option v-for="network in networks" :key="network.id" :value="network.id">
+              {{ network.name }} (Chain ID: {{ network.chainId }})
             </option>
           </select>
         </div>
@@ -260,7 +285,8 @@ export default {
         <!-- providers dropdown -->
         <div class="mb-4">
           <label class="form-label text-light">Provider</label>
-          <select v-model="form.provider" class="form-select" required :disabled="editingId && form.provider" v-on:change="this.fetchParameters()">
+          <select v-model="counterpartyForm.provider" class="form-select" required :disabled="editingId && counterpartyForm.provider"
+                  v-on:change="this.getParameters()">
             <option disabled value="">-- Select Provider --</option>
             <option v-for="p in providers" :key="p" :value="p">
               {{ p }}
@@ -269,20 +295,19 @@ export default {
         </div>
 
         <ParameterForm
-            v-model="form.parameters"
+            v-model="counterpartyForm.parameters"
             :parameters="availableParameters"
-            :editingId="editingId"
         />
 
         <div class="d-flex justify-content-end gap-2">
-          <button type="submit" class="btn btn-success">{{ editingId ? 'Update' : 'Create' }}</button>
-          <button type="button" class="btn btn-secondary" @click="resetForm">Cancel</button>
+          <button type="submit" class="btn btn-success" :disabled="!isFormValid">{{ editingId ? 'Update' : 'Create' }}</button>
+          <button type="button" class="btn btn-secondary" @click="resetCounterpartyForm">Cancel</button>
         </div>
       </form>
     </div>
 
     <!-- user registration form -->
-    <div v-if="registeringId" class="card bg-dark border-secondary p-3">
+    <div v-if="showForm === 'add_user'" class="card bg-dark border-secondary p-3">
       <h5 class="mb-3">Register User for Counterparty</h5>
       <form @submit.prevent="submitRegistration">
 
@@ -291,29 +316,29 @@ export default {
           <input
               type="text"
               class="form-control"
-              :value="counterparties.find(c => c.id === registeringId)?.name || ''"
+              :value="counterparties.find(c => c.id === editingId)?.name || ''"
               readonly
           />
         </div>
 
         <div class="mb-3">
           <label class="form-label text-light">Email</label>
-          <input v-model="registration.email" type="email" class="form-control" required/>
+          <input v-model="userRegistration.email" type="email" class="form-control" required/>
         </div>
 
         <div class="mb-3">
           <label class="form-label text-light">Password</label>
-          <input v-model="registration.password" type="password" class="form-control" required/>
+          <input v-model="userRegistration.password" type="password" class="form-control" required/>
         </div>
 
         <div class="mb-3">
           <label class="form-label text-light">Confirm Password</label>
-          <input v-model="registration.confirmPassword" type="password" class="form-control" required/>
+          <input v-model="userRegistration.confirmPassword" type="password" class="form-control" required/>
         </div>
 
         <div class="d-flex justify-content-end gap-2">
           <button type="submit" class="btn btn-primary">Register</button>
-          <button type="button" class="btn btn-secondary" @click="cancelRegistration">Cancel</button>
+          <button type="button" class="btn btn-secondary" @click="resetUserRegistrationForm">Cancel</button>
         </div>
       </form>
     </div>

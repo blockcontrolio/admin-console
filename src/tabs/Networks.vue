@@ -1,13 +1,8 @@
 <script>
-import {
-  getNetworkById,
-  createNetwork,
-  updateNetwork,
-  getParameters,
-  deleteParameters
-} from '../api/networks.js'
+import {createNetwork, deleteParameters, fetchNetworkById, fetchParameters, updateNetwork} from '../api/networks.js'
 import ParameterItem from "./ParameterItem.vue";
 import ParameterForm from "./ParameterEdit.vue";
+import {markRaw} from "vue";
 
 export default {
   name: 'Networks',
@@ -16,30 +11,29 @@ export default {
   data() {
     return {
       editingId: null,
-      newParam: '',
+      newParam: "",
       form: this.emptyForm(),
       networkParameters: []
     };
   },
   methods: {
     emptyForm() {
-      return {
-        name: '',
-        chainId: '',
-        rpcUrl: '',
-        explorerUrl: '',
-        wsUrl: '',
+      return markRaw({
+        name: "",
+        chainId: "",
+        rpcUrl: "",
+        explorerUrl: "",
+        wsUrl: "",
         nativeAsset: {
-          symbol: '',
-          name: '',
-          decimals: ''
+          symbol: "",
+          name: ""
         },
         parameters: {}
-      };
+      });
     },
     async getParameters() {
       try {
-        this.networkParameters = await getParameters();
+        this.networkParameters = await fetchParameters();
       } catch (err) {
         console.error('Error fetching network parameters', err);
       }
@@ -51,37 +45,16 @@ export default {
       }
     },
     async editNetwork(id) {
+      this.editingId = id;
       try {
-        const net = await getNetworkById(id);
-        this.editingId = id;
+        const network = await fetchNetworkById(id);
 
-        // Deep clone parameters (to break the shared reference)
-        const clonedParameters = JSON.parse(JSON.stringify(net.parameters));
-        this.originalData = {
-          name: net.name ?? null,
-          chainId: net.chainId,
-          rpcUrl: net.rpcUrl,
-          explorerUrl: net.explorerUrl,
-          wsUrl: net.wsUrl,
-          nativeAsset: {
-            symbol: net.nativeAsset?.symbol ?? null,
-            name: net.nativeAsset?.name ?? null
-          },
-          parameters: clonedParameters
-        };
-
-        this.form = {
-          name: net.name,
-          chainId: net.chainId,
-          rpcUrl: net.rpcUrl,
-          explorerUrl: net.explorerUrl,
-          wsUrl: net.wsUrl,
-          nativeAsset: {
-            symbol: net.nativeAsset?.symbol,
-            name: net.nativeAsset?.name
-          },
-          parameters: JSON.parse(JSON.stringify(net.parameters))
-        };
+        this.originalData = markRaw({
+          ...network
+        });
+        this.form = markRaw({
+          ...network
+        });
       } catch (err) {
         console.error('Error fetching network', err);
       }
@@ -135,10 +108,22 @@ export default {
       return patch;
     },
   },
+  computed: {
+    isFormValid() {
+      const f = this.form;
+      return (
+          f.name.trim() !== "" &&
+          f.chainId > 0 &&
+          f.rpcUrl.trim() !== "" &&
+          f.explorerUrl.trim() !== "" &&
+          f.wsUrl.trim() !== "" &&
+          f.nativeAsset.symbol.trim() !== "" &&
+          f.nativeAsset.name.trim() !== ""
+      );
+    },
+  },
   async mounted() {
-    await Promise.all([
-      this.getParameters()
-    ]);
+    await this.getParameters();
   }
 };
 </script>
@@ -188,7 +173,7 @@ export default {
     </div>
 
     <!-- create / update form -->
-    <div class="card bg-dark border-secondary p-3 mt-4">
+    <div v-if="networkParameters.length" class="card bg-dark border-secondary p-3 mt-4">
       <h5 class="text-light mb-3">{{ editingId ? 'Update Network' : 'Create Network' }}</h5>
       <form @submit.prevent="submitForm">
         <div class="mb-3">
@@ -232,11 +217,10 @@ export default {
         <ParameterForm
             v-model="form.parameters"
             :parameters="networkParameters"
-            :editingId="editingId"
         />
 
         <div class="d-flex justify-content-end gap-2">
-          <button type="submit" class="btn btn-success">{{ editingId ? 'Update' : 'Create' }}</button>
+          <button type="submit" class="btn btn-success" :disabled="!isFormValid">{{editingId ? 'Update' : 'Create' }}</button>
           <button type="button" class="btn btn-secondary" @click="resetForm">Cancel</button>
         </div>
       </form>

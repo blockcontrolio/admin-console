@@ -26,16 +26,16 @@ async function request(url, options = {}) {
 }
 
 // GET /admin/networks
-export function getAllNetworks() {
+export function fetchNetworks() {
     return request(apiBaseUrl);
 }
 
-export function getParameters() {
+export function fetchParameters() {
     return request(`${apiBaseUrl}/parameters`);
 }
 
 // GET /admin/networks/{id}
-export function getNetworkById(id) {
+export function fetchNetworkById(id) {
     return request(`${apiBaseUrl}/${id}`);
 }
 

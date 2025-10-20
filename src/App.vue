@@ -1,7 +1,7 @@
 <script>
 import Networks from "./tabs/Networks.vue";
 import Counterparties from "./tabs/Counterparties.vue";
-import {getAllNetworks} from "./api/networks";
+import {fetchNetworks} from "./api/networks";
 
 export default {
   name: 'App',
@@ -20,9 +20,9 @@ export default {
     }
   },
   methods: {
-    async fetchNetworks() {
+    async getAllNetworks() {
       try {
-        this.networks = await getAllNetworks();
+        this.networks = await fetchNetworks();
       } catch (err) {
         console.error('Error fetching networks', err);
       }
@@ -42,7 +42,7 @@ export default {
   async mounted() {
     this.originalApiKey = this.apiKey;
     if (this.apiKey) {
-      await this.fetchNetworks();
+      await this.getAllNetworks();
     }
   }
 }

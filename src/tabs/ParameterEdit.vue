@@ -10,10 +10,6 @@ export default {
       type: Array,
       default: () => []
     },
-    editingId: {
-      type: [String, Number, null],
-      default: null
-    }
   },
   emits: ["update:modelValue"],
   data() {
@@ -60,7 +56,6 @@ export default {
           v-model="localParameters[key]"
           type="text"
           class="form-control"
-          :required="!editingId"
       />
     </div>
 

@@ -26,12 +26,17 @@ async function request(url, options = {}) {
 }
 
 // GET /admin/counterparties
-export function getCounterparties() {
+export function fetchCounterparties() {
     return request(apiBaseUrl);
 }
 
+// GET /admin/counterparties/providers
+export function fetchProviders() {
+    return request(`${apiBaseUrl}/providers`);
+}
+
 // GET /admin/counterparties/{counterpartyId}
-export function getCounterparty(counterpartyId) {
+export function fetchCounterparty(counterpartyId) {
     return request(`${apiBaseUrl}/${counterpartyId}`);
 }
 
@@ -60,7 +65,7 @@ export function addUserToCounterparty(data) {
 }
 
 // GET /admin/counterparties/parameters
-export function getParameters(provider) {
+export function fetchParameters(provider) {
     if (provider) {
         return request(`${apiBaseUrl}/parameters?provider=${provider}`);
     }
