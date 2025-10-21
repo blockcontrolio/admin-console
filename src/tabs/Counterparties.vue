@@ -91,24 +91,44 @@ export default {
         delete c.parameters[key];
       }
     },
-    async submitForm() {
-      try {
-        if (!this.editingId) {
-          await createCounterparty(this.counterpartyForm);
-        } else {
-          const patch = this.preparePatchPayload();
-          if (Object.keys(patch).length === 0) {
-            console.log("No changes to send.");
-            return;
-          }
-          console.log('Sending update counterparty:', patch);
+    async handleCreateCounterparty() {
+      const form = this.$refs.counterparty_form;
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
 
-          await updateCounterparty(this.editingId, patch);
+      try {
+        let created = await createCounterparty(this.counterpartyForm);
+        this.counterparties.push(created); // add to array
+        this.resetCounterpartyForm();
+      } catch (err) {
+        console.error('Error creating counterparty:', err);
+      }
+    },
+    async handleUpdateCounterparty() {
+      const form = this.$refs.counterparty_form;
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+      try {
+        const patch = this.preparePatchPayload();
+        if (Object.keys(patch).length === 0) {
+          console.log('No changes to send.');
+          return;
+        }
+
+        console.log('Sending update counterparty:', patch);
+        let updated = await updateCounterparty(this.editingId, patch);
+        // find and replace in array
+        const index = this.counterparties.findIndex(c => c.id === updated.id);
+        if (index !== -1) {
+          this.counterparties[index] = updated;
         }
         this.resetCounterpartyForm();
-        await this.getCounterparties();
       } catch (err) {
-        console.error('Error saving counterparty', err);
+        console.error('Error updating counterparty:', err);
       }
     },
     resetCounterpartyForm() {
@@ -184,15 +204,6 @@ export default {
     },
   },
   computed: {
-    isFormValid() {
-      const f = this.counterpartyForm;
-      return (
-          f.name.trim() !== "" &&
-          f.type !== "" &&
-          f.networkId !== "" &&
-          f.provider !== ""
-      );
-    },
   },
   async mounted() {
     await Promise.all([
@@ -254,8 +265,8 @@ export default {
 
     <!-- create / update form -->
     <div v-if="(showForm === 'create_counterparty' || showForm === 'edit_counterparty') && providers.length" class="card bg-dark border-secondary p-3 mt-4">
-      <h5 class="mb-3">{{ editingId ? 'Update Counterparty' : 'Create Counterparty' }}</h5>
-      <form @submit.prevent="submitForm">
+      <h5 class="mb-3 text-light">{{ showForm === 'edit_counterparty' ? 'Update Counterparty' : 'Create Counterparty' }}</h5>
+      <form ref="counterparty_form" @submit.prevent>
         <div class="mb-3">
           <label class="form-label text-light">Name</label>
           <input v-model="counterpartyForm.name" type="text" class="form-control" required/>
@@ -263,7 +274,7 @@ export default {
 
         <div class="mb-3">
           <label class="form-label text-light">Type</label>
-          <select v-model="counterpartyForm.type" class="form-select" required :disabled="editingId && counterpartyForm.type">
+          <select v-model="counterpartyForm.type" class="form-select" required :disabled="showForm === 'edit_counterparty' && counterpartyForm.type">
             <option disabled value="">-- Counterparty Type --</option>
             <option v-for="t in types" :key="t.code" :value="t.code">
               {{ t.code }}
@@ -274,7 +285,7 @@ export default {
         <!-- networks dropdown -->
         <div class="mb-3">
           <label class="form-label text-light">Network</label>
-          <select v-model="counterpartyForm.networkId" class="form-select" required :disabled="editingId && counterpartyForm.networkId">
+          <select v-model="counterpartyForm.networkId" class="form-select" required :disabled="showForm === 'edit_counterparty' && counterpartyForm.networkId">
             <option disabled value="">-- Select Network --</option>
             <option v-for="network in networks" :key="network.id" :value="network.id">
               {{ network.name }} (Chain ID: {{ network.chainId }})
@@ -285,7 +296,7 @@ export default {
         <!-- providers dropdown -->
         <div class="mb-4">
           <label class="form-label text-light">Provider</label>
-          <select v-model="counterpartyForm.provider" class="form-select" required :disabled="editingId && counterpartyForm.provider"
+          <select v-model="counterpartyForm.provider" class="form-select" required :disabled="showForm === 'edit_counterparty' && counterpartyForm.provider"
                   v-on:change="this.getParameters()">
             <option disabled value="">-- Select Provider --</option>
             <option v-for="p in providers" :key="p" :value="p">
@@ -294,13 +305,15 @@ export default {
           </select>
         </div>
 
-        <ParameterForm
-            v-model="counterpartyForm.parameters"
-            :parameters="availableParameters"
-        />
+        <ParameterForm v-model="counterpartyForm.parameters" :parameters="availableParameters"/>
 
         <div class="d-flex justify-content-end gap-2">
-          <button type="submit" class="btn btn-success" :disabled="!isFormValid">{{ editingId ? 'Update' : 'Create' }}</button>
+          <button v-if="showForm === 'create_counterparty'" type="submit" class="btn btn-success" @click="handleCreateCounterparty">
+            {{ 'Create' }}
+          </button>
+          <button v-if="showForm === 'edit_counterparty'" type="submit" class="btn btn-success" @click="handleUpdateCounterparty">
+            {{ 'Update' }}
+          </button>
           <button type="button" class="btn btn-secondary" @click="resetCounterpartyForm">Cancel</button>
         </div>
       </form>
@@ -308,7 +321,7 @@ export default {
 
     <!-- user registration form -->
     <div v-if="showForm === 'add_user'" class="card bg-dark border-secondary p-3">
-      <h5 class="mb-3">Register User for Counterparty</h5>
+      <h5 class="mb-3 text-light">Add User to Counterparty</h5>
       <form @submit.prevent="submitRegistration">
 
         <div class="mb-3">

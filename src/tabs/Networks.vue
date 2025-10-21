@@ -59,28 +59,48 @@ export default {
         console.error('Error fetching network', err);
       }
     },
-    async submitForm() {
+    async handleCreate() {
+      const form = this.$refs.form;
+      // Let browser show validation errors if invalid
+      if (!form.checkValidity()) {
+        form.reportValidity(); // shows validation popup
+        return;
+      }
       try {
-        if (!this.editingId) {
-          await createNetwork(this.form);
-        } else {
-          const patch = this.preparePatchPayload();
-          if (Object.keys(patch).length === 0) {
-            console.log("No changes to send.");
-            return;
-          }
-          console.log('Sending update network:', patch);
-
-          await updateNetwork(this.editingId, this.form);
+        let created = await createNetwork(this.form);
+        this.networks.push(created); // add to array
+        this.resetForm();
+      } catch (err) {
+        console.error('Error creating network:', err);
+      }
+    },
+    async handleUpdate() {
+      const form = this.$refs.form;
+      // Let browser show validation errors if invalid
+      if (!form.checkValidity()) {
+        form.reportValidity(); // shows validation popup
+      }
+      try {
+        const patch = this.preparePatchPayload();
+        if (Object.keys(patch).length === 0) {
+          console.log("No changes to send.");
+          return;
+        }
+        console.log('Sending update network:', patch);
+        let updated = await updateNetwork(this.editingId, this.form);
+        // find and replace in array
+        const index = this.networks.findIndex(c => c.id === updated.id);
+        if (index !== -1) {
+          this.networks[index] = updated;
         }
         this.resetForm();
       } catch (err) {
-        console.error('Error saving network', err);
+        console.error('Error updating network:', err);
       }
     },
     resetForm() {
-      this.editingId = null;
       this.form = this.emptyForm();
+      this.editingId = null;
     },
     preparePatchPayload() {
       const patch = {};
@@ -109,18 +129,6 @@ export default {
     },
   },
   computed: {
-    isFormValid() {
-      const f = this.form;
-      return (
-          f.name.trim() !== "" &&
-          f.chainId > 0 &&
-          f.rpcUrl.trim() !== "" &&
-          f.explorerUrl.trim() !== "" &&
-          f.wsUrl.trim() !== "" &&
-          f.nativeAsset.symbol.trim() !== "" &&
-          f.nativeAsset.name.trim() !== ""
-      );
-    },
   },
   async mounted() {
     await this.getParameters();
@@ -175,7 +183,7 @@ export default {
     <!-- create / update form -->
     <div v-if="networkParameters.length" class="card bg-dark border-secondary p-3 mt-4">
       <h5 class="text-light mb-3">{{ editingId ? 'Update Network' : 'Create Network' }}</h5>
-      <form @submit.prevent="submitForm">
+      <form ref="form" @submit.prevent>
         <div class="mb-3">
           <label class="form-label text-light">Name</label>
           <input v-model="form.name" type="text" class="form-control" required minlength="4"/>
@@ -214,13 +222,15 @@ export default {
           </div>
         </fieldset>
 
-        <ParameterForm
-            v-model="form.parameters"
-            :parameters="networkParameters"
-        />
+        <ParameterForm v-model="form.parameters" :parameters="networkParameters"/>
 
         <div class="d-flex justify-content-end gap-2">
-          <button type="submit" class="btn btn-success" :disabled="!isFormValid">{{editingId ? 'Update' : 'Create' }}</button>
+          <button v-if="!editingId" type="button" class="btn btn-success" @click="handleCreate">
+            Create
+          </button>
+          <button v-if="editingId" type="button" class="btn btn-primary" @click="handleUpdate">
+            Update
+          </button>
           <button type="button" class="btn btn-secondary" @click="resetForm">Cancel</button>
         </div>
       </form>
