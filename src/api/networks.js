@@ -34,9 +34,9 @@ export function fetchParameters() {
     return request(`${apiBaseUrl}/parameters`);
 }
 
-// GET /admin/networks/{id}
-export function fetchNetworkById(id) {
-    return request(`${apiBaseUrl}/${id}`);
+// GET /admin/networks/{networkId}
+export function fetchNetworkById(networkId) {
+    return request(`${apiBaseUrl}/${networkId}`);
 }
 
 // POST /admin/networks
@@ -47,9 +47,9 @@ export function createNetwork(data) {
     });
 }
 
-// PUT /admin/networks/{id}
-export function updateNetwork(id, data) {
-    return request(`${apiBaseUrl}/${id}`, {
+// PUT /admin/networks/{networkId}
+export function updateNetwork(networkId, data) {
+    return request(`${apiBaseUrl}/${networkId}`, {
         method: 'PUT',
         body: JSON.stringify(data)
     });

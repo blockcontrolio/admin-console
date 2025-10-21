@@ -56,9 +56,9 @@ export function updateCounterparty(counterpartyId, data) {
     });
 }
 
-// POST /admin/counterparties/register
-export function addUserToCounterparty(data) {
-    return request(`${apiBaseUrl}/users`, {
+// POST /admin/counterparties/{counterpartyId}/users
+export function addUserToCounterparty(counterpartyId, data) {
+    return request(`${apiBaseUrl}/${counterpartyId}/users`, {
         method: 'POST',
         body: JSON.stringify(data)
     });

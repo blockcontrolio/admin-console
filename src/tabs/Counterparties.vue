@@ -19,6 +19,7 @@ export default {
   props: ['networks'],
   data() {
     return {
+      roles: ['USER', 'ADMIN'],
       types: [
         {
           code: 'EMI'
@@ -142,16 +143,15 @@ export default {
       this.showForm = "add_user";
       this.userRegistration = markRaw({
         email: "",
+        role: "",
         password: "",
         confirmPassword: "",
-        counterpartyId: "",
         parameters: {}
       });
-      this.userRegistration.counterpartyId = counterpartyId;
     },
-    async submitRegistration() {
+    async submitRegistration(counterpartyId) {
       try {
-        await addUserToCounterparty(this.userRegistration);
+        await addUserToCounterparty(counterpartyId, this.userRegistration);
         this.resetUserRegistrationForm();
       } catch (err) {
         console.error('Error registering user', err);
@@ -161,9 +161,9 @@ export default {
       this.editingId = null;
       this.userRegistration = markRaw({
         email: "",
+        role: "",
         password: "",
         confirmPassword: "",
-        counterpartyId: "",
         parameters: {}
       });
       this.showForm = "create_counterparty";
@@ -322,7 +322,7 @@ export default {
     <!-- user registration form -->
     <div v-if="showForm === 'add_user'" class="card bg-dark border-secondary p-3">
       <h5 class="mb-3 text-light">Add User to Counterparty</h5>
-      <form @submit.prevent="submitRegistration">
+      <form @submit.prevent="submitRegistration(editingId)">
 
         <div class="mb-3">
           <label class="form-label text-light">Counterparty</label>
@@ -332,6 +332,17 @@ export default {
               :value="counterparties.find(c => c.id === editingId)?.name || ''"
               readonly
           />
+        </div>
+
+        <!-- roles dropdown -->
+        <div class="mb-4">
+          <label class="form-label text-light">Role</label>
+          <select v-model="userRegistration.role" class="form-select" required>
+            <option disabled value="">-- Select Role --</option>
+            <option v-for="role in roles" :key="role" :value="role">
+              {{ role }}
+            </option>
+          </select>
         </div>
 
         <div class="mb-3">
@@ -350,7 +361,7 @@ export default {
         </div>
 
         <div class="d-flex justify-content-end gap-2">
-          <button type="submit" class="btn btn-primary">Register</button>
+          <button type="submit" class="btn btn-primary">Add User</button>
           <button type="button" class="btn btn-secondary" @click="resetUserRegistrationForm">Cancel</button>
         </div>
       </form>
