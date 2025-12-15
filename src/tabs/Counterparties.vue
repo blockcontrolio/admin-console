@@ -7,6 +7,8 @@ import {
   fetchCounterparty,
   fetchParameters,
   fetchProviders,
+  fetchUsersInCounterparty,
+  editUserInCounterparty,
   updateCounterparty
 } from '../api/counterparties.js'
 import ParameterItem from "./ParameterItem.vue";
@@ -29,12 +31,15 @@ export default {
         }],
       providers: ['MOCK', 'MPC_VAULT', 'UTILA', 'FIREBLOCKS', 'DFNS'],
       counterparties: [],
-      showForm: "create_counterparty", // edit_counterparty, add_user
+      selectedCounterpartyId: null,
+      users: [],
+      showForm: null, // create_counterparty, edit_counterparty, add_user, edit_user
       editingId: null,
       newParam: "",
       counterpartyForm: this.emptyForm(),
       originalCounterpartyData: {},
       userRegistration: {},
+      userEmail: {},
       availableParameters: []
     };
   },
@@ -59,6 +64,19 @@ export default {
       } catch (err) {
         console.error('Error fetching parameters', err);
       }
+    },
+    async loadUsers(counterpartyId) {
+      try {
+        this.users = await fetchUsersInCounterparty(counterpartyId);
+        this.selectedCounterpartyId = counterpartyId
+        this.showForm = "list_users";
+      } catch (err) {
+        console.error('Error fetching users in counterparty', err);
+      }
+    },
+    addCounterparty() {
+      this.resetCounterpartyForm();
+      this.showForm = "create_counterparty";
     },
     async editCounterparty(id) {
       this.showForm = "edit_counterparty";
@@ -134,24 +152,37 @@ export default {
     },
     resetCounterpartyForm() {
       this.editingId = null;
-      this.showForm = "create_counterparty";
+      this.showForm = null;
       this.counterpartyForm = this.emptyForm();
       this.originalCounterpartyData = {};
     },
-    openRegistration(counterpartyId) {
+    addUser(counterpartyId) {
       this.editingId = counterpartyId;
       this.showForm = "add_user";
       this.userRegistration = markRaw({
         email: "",
         role: "",
-        password: "",
-        confirmPassword: "",
         parameters: {}
       });
     },
-    async submitRegistration(counterpartyId) {
+    editUser(counterpartyId, email) {
+      this.editingId = counterpartyId;
+      this.showForm = "edit_user";
+      this.userEmail = markRaw({
+        email: email
+      });
+    },
+    async submitUserRegistration(counterpartyId) {
       try {
         await addUserToCounterparty(counterpartyId, this.userRegistration);
+        this.resetUserRegistrationForm();
+      } catch (err) {
+        console.error('Error registering user', err);
+      }
+    },
+    async submitUserUpdate(counterpartyId) {
+      try {
+        await editUserInCounterparty(counterpartyId, this.userEmail);
         this.resetUserRegistrationForm();
       } catch (err) {
         console.error('Error registering user', err);
@@ -162,8 +193,6 @@ export default {
       this.userRegistration = markRaw({
         email: "",
         role: "",
-        password: "",
-        confirmPassword: "",
         parameters: {}
       });
       this.showForm = "create_counterparty";
@@ -217,12 +246,15 @@ export default {
 <template>
   <div class="counterparties-tab container-fluid py-3">
     <!-- title -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div v-if="!showForm" class="d-flex justify-content-between align-items-center mb-3">
       <h4 class="m-0">Counterparties</h4>
+    </div>
+    <div v-if="!showForm" class="d-flex justify-content-end my-3">
+      <button class="btn btn-sm btn-secondary" @click="addCounterparty()">Add Counterparty</button>
     </div>
 
     <!-- counterparties table -->
-    <div class="table-responsive">
+    <div v-if="!showForm" class="table-responsive">
       <table class="table table-dark table-striped table-bordered" style="table-layout: auto;">
         <thead>
         <tr>
@@ -231,7 +263,7 @@ export default {
           <th>Network</th>
           <th>Provider</th>
           <th>Parameters</th>
-          <th>Actions</th>
+          <th class="text-end">Actions</th>
         </tr>
         </thead>
         <tbody>
@@ -250,9 +282,9 @@ export default {
             />
           </td>
           <td class="text-center">
-            <div class="d-inline-flex gap-2 flex-nowrap">
+            <div class="d-inline-flex justify-content-end gap-2 flex-nowrap">
               <button class="btn btn-sm btn-info" @click="editCounterparty(c.id)">Edit</button>
-              <button class="btn btn-sm btn-warning" @click="openRegistration(c.id)">Add User</button>
+              <button class="btn btn-sm btn-warning" @click="loadUsers(c.id)">Manage Users</button>
             </div>
           </td>
         </tr>
@@ -308,13 +340,13 @@ export default {
         <ParameterForm v-model="counterpartyForm.parameters" :parameters="availableParameters"/>
 
         <div class="d-flex justify-content-end gap-2">
-          <button v-if="showForm === 'create_counterparty'" type="submit" class="btn btn-success" @click="handleCreateCounterparty">
+          <button v-if="showForm === 'create_counterparty'" type="submit" class="btn btn-sm btn-success" @click="handleCreateCounterparty">
             {{ 'Create' }}
           </button>
-          <button v-if="showForm === 'edit_counterparty'" type="submit" class="btn btn-success" @click="handleUpdateCounterparty">
+          <button v-if="showForm === 'edit_counterparty'" type="submit" class="btn btn-sm btn-success" @click="handleUpdateCounterparty">
             {{ 'Update' }}
           </button>
-          <button type="button" class="btn btn-secondary" @click="resetCounterpartyForm">Cancel</button>
+          <button type="button" class="btn btn-sm btn-secondary" @click="resetCounterpartyForm">Cancel</button>
         </div>
       </form>
     </div>
@@ -322,7 +354,7 @@ export default {
     <!-- user registration form -->
     <div v-if="showForm === 'add_user'" class="card bg-dark border-secondary p-3">
       <h5 class="mb-3 text-light">Add User to Counterparty</h5>
-      <form @submit.prevent="submitRegistration(editingId)">
+      <form @submit.prevent="submitUserRegistration(editingId)">
 
         <div class="mb-3">
           <label class="form-label text-light">Counterparty</label>
@@ -350,22 +382,79 @@ export default {
           <input v-model="userRegistration.email" type="email" class="form-control" required/>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label text-light">Password</label>
-          <input v-model="userRegistration.password" type="password" class="form-control" required/>
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label text-light">Confirm Password</label>
-          <input v-model="userRegistration.confirmPassword" type="password" class="form-control" required/>
-        </div>
-
         <div class="d-flex justify-content-end gap-2">
-          <button type="submit" class="btn btn-primary">Add User</button>
-          <button type="button" class="btn btn-secondary" @click="resetUserRegistrationForm">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-primary">Add User</button>
+          <button type="button" class="btn btn-sm btn-secondary" @click="resetUserRegistrationForm">Cancel</button>
         </div>
       </form>
     </div>
+
+    <div v-if="showForm === 'edit_user'" class="card bg-dark border-secondary p-3">
+      <h5 class="mb-3 text-light">Update User in {{counterparties.find(c => c.id === editingId)?.name || ''}} Counterparty</h5>
+      <form @submit.prevent="submitUserUpdate(editingId)">
+
+        <div class="mb-3">
+          <label class="form-label text-light">Actual Email</label>
+          <input v-model="userEmail.email" type="email" class="form-control" readonly/>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label text-light">New Email</label>
+          <input v-model="userEmail.newEmail" type="email" class="form-control" required/>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label text-light">Confirm Email</label>
+          <input v-model="userEmail.confirmEmail" type="email" class="form-control" required/>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+          <button type="submit" class="btn btn-sm btn-primary">Update User</button>
+          <button type="button" class="btn btn-sm btn-secondary" @click="resetUserRegistrationForm">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- users table -->
+    <div v-if="showForm === 'list_users'" class="table-responsive">
+
+      <!-- title -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="m-0">Users</h4>
+      </div>
+
+      <div class="d-flex justify-content-end my-3">
+        <button class="btn btn-sm btn-secondary" @click="addUser(this.selectedCounterpartyId)">Add User</button>
+      </div>
+      <table class="table table-dark table-striped table-bordered" style="table-layout: auto;">
+        <thead>
+        <tr>
+          <th>ID</th>
+          <th>Role</th>
+          <th>Enable</th>
+          <th>Created</th>
+          <th class="text-end">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="user in users" :key="user.email">
+          <td>{{ user.email }}</td>
+          <td>{{ user.role }}</td>
+          <td>{{ user.enabled }}</td>
+          <td>{{ user.createdAt }}</td>
+          <td class="text-center">
+            <div class="d-flex justify-content-end gap-2 flex-nowrap">
+              <button class="btn btn-sm btn-warning" @click="editUser(this.selectedCounterpartyId, user.email)">Edit User</button>
+            </div>
+          </td>
+        </tr>
+        <tr v-if="users.length === 0">
+          <td colspan="6" class="text-center">No users found</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
   </div>
 </template>
 

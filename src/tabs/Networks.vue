@@ -225,13 +225,13 @@ export default {
         <ParameterForm v-model="form.parameters" :parameters="networkParameters"/>
 
         <div class="d-flex justify-content-end gap-2">
-          <button v-if="!editingId" type="button" class="btn btn-success" @click="handleCreate">
+          <button v-if="!editingId" type="button" class="btn btn-sm btn-success" @click="handleCreate">
             Create
           </button>
-          <button v-if="editingId" type="button" class="btn btn-primary" @click="handleUpdate">
+          <button v-if="editingId" type="button" class="btn btn-sm btn-primary" @click="handleUpdate">
             Update
           </button>
-          <button type="button" class="btn btn-secondary" @click="resetForm">Cancel</button>
+          <button type="button" class="btn btn-sm btn-secondary" @click="resetForm">Cancel</button>
         </div>
       </form>
     </div>

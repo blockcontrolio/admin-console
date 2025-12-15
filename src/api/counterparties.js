@@ -56,10 +56,25 @@ export function updateCounterparty(counterpartyId, data) {
     });
 }
 
+// GET /admin/counterparties/{counterpartyId}/users
+export function fetchUsersInCounterparty(counterpartyId) {
+    return request(`${apiBaseUrl}/${counterpartyId}/users`, {
+        method: 'GET'
+    });
+}
+
 // POST /admin/counterparties/{counterpartyId}/users
 export function addUserToCounterparty(counterpartyId, data) {
     return request(`${apiBaseUrl}/${counterpartyId}/users`, {
         method: 'POST',
+        body: JSON.stringify(data)
+    });
+}
+
+// PATCH /admin/counterparties/{counterpartyId}/users
+export function editUserInCounterparty(counterpartyId, data) {
+    return request(`${apiBaseUrl}/${counterpartyId}/users`, {
+        method: 'PATCH',
         body: JSON.stringify(data)
     });
 }
