@@ -1,11 +1,12 @@
 <script>
 import Networks from "./tabs/Networks.vue";
 import Counterparties from "./tabs/Counterparties.vue";
+import Tokens from "./tabs/Tokens.vue";
 import {fetchNetworks} from "./api/networks";
 
 export default {
   name: 'App',
-  components: {Networks, Counterparties},
+  components: {Networks, Counterparties, Tokens},
   data() {
     return {
       apiKey: localStorage.getItem('x-api-key') || '',
@@ -105,6 +106,20 @@ export default {
           Counterparties
         </button>
       </li>
+      <li class="nav-item" role="presentation">
+        <button
+            class="nav-link"
+            id="tokens-tab"
+            data-bs-toggle="tab"
+            data-bs-target="#tokens"
+            type="button"
+            role="tab"
+            aria-controls="tokens"
+            aria-selected="false"
+        >
+          Tokens
+        </button>
+      </li>
     </ul>
     <div class="tab-content mt-3" id="mainTabsContent">
       <div
@@ -122,6 +137,14 @@ export default {
           aria-labelledby="counterparties-tab"
       >
         <Counterparties :networks="networks"/>
+      </div>
+      <div
+          class="tab-pane fade"
+          id="tokens"
+          role="tabpanel"
+          aria-labelledby="tokens-tab"
+      >
+        <Tokens :networks="networks"/>
       </div>
     </div>
   </div>
