@@ -1,6 +1,6 @@
 <script>
 
-import {fetchTokens} from "../api/tokens";
+import {fetchTokens, updateTokenActivation} from "../api/tokens";
 
 export default {
   name: 'Networks',
@@ -29,6 +29,17 @@ export default {
       } catch (err) {
         console.error('Error fetching tokens', err);
       }
+    },
+    async onToggle(token, event) {
+        const newValue = event.target.checked;
+        try {
+          await updateTokenActivation(token.id, newValue);
+          token.active = newValue; // update UI after success
+        } catch (e) {
+          // revert checkbox if request failed
+          event.target.checked = token.active;
+          alert(e.message);
+        }
     },
     findNetwork(tokenChainId) {
       let found = this.networks.find(t => t.chainId === tokenChainId);
@@ -73,7 +84,13 @@ export default {
           <td>{{ token.issuerCounterparty?.name }}</td>
           <td>{{ formatTimestamp(token.createdAt) }}</td>
           <td>{{ formatTimestamp(token.updatedAt) }}</td>
-          <td>{{ token.active }}</td>
+          <td>
+            <input
+              type="checkbox"
+              :checked="token.active"
+              @change="onToggle(token, $event)"
+            />
+          </td>
         </tr>
         <tr v-if="tokens.length === 0">
           <td colspan="8" class="text-center">No tokens found</td>
