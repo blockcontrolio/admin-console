@@ -22,10 +22,23 @@ async function request(url, options = {}) {
         throw new Error(`API request failed: ${response.status} ${errorBody}`);
     }
 
+    // PATCH returns no body (void), so guard this
+    if (response.status === 204 || response.headers.get("content-length") === "0") {
+        return null;
+    }
+
     return await response.json();
 }
 
 // GET /admin/tokens
 export function fetchTokens() {
     return request(apiBaseUrl);
+}
+
+// PATCH /admin/tokens/{tokenId}
+export function updateTokenActivation(tokenId, active) {
+    return request(`${apiBaseUrl}/${tokenId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ active })
+    });
 }

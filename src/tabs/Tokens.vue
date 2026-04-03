@@ -61,6 +61,7 @@ export default {
           <th>Counterparty Owner</th>
           <th>Created At</th>
           <th>Updated At</th>
+          <th>Active</th>
         </tr>
         </thead>
         <tbody>
@@ -72,6 +73,7 @@ export default {
           <td>{{ token.issuerCounterparty?.name }}</td>
           <td>{{ formatTimestamp(token.createdAt) }}</td>
           <td>{{ formatTimestamp(token.updatedAt) }}</td>
+          <td>{{ token.active }}</td>
         </tr>
         <tr v-if="tokens.length === 0">
           <td colspan="8" class="text-center">No tokens found</td>
